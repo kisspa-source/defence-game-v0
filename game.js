@@ -37,6 +37,62 @@ const pathGrid = [
     {x: 3, y: 10}, {x: 4, y: 10}, {x: 5, y: 10}, {x: 6, y: 10}, {x: 7, y: 10}, {x: 8, y: 10}, {x: 9, y: 10} // Floor 1 Server Room
 ];
 
+function scaleColor(color, intensity) {
+    if (color.startsWith('#')) {
+        let r = parseInt(color.slice(1, 3), 16);
+        let g = parseInt(color.slice(3, 5), 16);
+        let b = parseInt(color.slice(5, 7), 16);
+        r = Math.min(255, Math.max(0, Math.floor(r * intensity)));
+        g = Math.min(255, Math.max(0, Math.floor(g * intensity)));
+        b = Math.min(255, Math.max(0, Math.floor(b * intensity)));
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+    return color;
+}
+
+function drawLowPolyFacet(ctx, points, normal, baseColor) {
+    const LX = -0.3637, LY = -0.5819, LZ = 0.7274;
+    const dot = normal.x * LX + normal.y * LY + normal.z * LZ;
+    const intensity = 0.35 + 0.65 * Math.max(0, dot);
+    ctx.fillStyle = scaleColor(baseColor, intensity);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
+
+function project3D(x, y, z, rx, ry, rz, cx, cy) {
+    // Y-axis rotation
+    let x1 = x * Math.cos(ry) - z * Math.sin(ry);
+    let z1 = x * Math.sin(ry) + z * Math.cos(ry);
+    
+    // X-axis rotation
+    let y2 = y * Math.cos(rx) - z1 * Math.sin(rx);
+    let z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
+    
+    const dist = 120;
+    const scale = 1.0 / (1.0 + z2 / dist);
+    return { x: cx + x1 * scale, y: cy + y2 * scale };
+}
+
+function drawProjectedShadow(ctx, points, height) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.beginPath();
+    const p0 = { x: points[0].x + height * 0.5, y: points[0].y + height * 0.8 };
+    ctx.moveTo(p0.x, p0.y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x + height * 0.5, points[i].y + height * 0.8);
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
 // Helper to check if a grid cell is part of the path
 function isPathCell(x, y) {
     return pathGrid.some(p => p.x === x && p.y === y);
@@ -54,57 +110,53 @@ function drawCarpetPathTile(ctx, px, py, col, row) {
                            (col === 7 && row >= 4 && row <= 7) || 
                            (col === 2 && row >= 7 && row <= 10);
 
-    if (tilesLoaded) {
-        const tw = jrpgTiles.width / 4;
-        const th = jrpgTiles.height / 4;
-        const sx = isVerticalPath ? 2 * tw : 1 * tw; // Col 2 for stairs, Col 1 for path
-        ctx.drawImage(jrpgTiles, sx, 0, tw, th, px, py, CELL_SIZE, CELL_SIZE);
-        return;
-    }
-
     if (isVerticalPath) {
-        // Cozy Wooden Stairs connecting floors
-        ctx.fillStyle = '#dfc3a7'; 
-        ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-
-        ctx.strokeStyle = '#a88567';
-        ctx.lineWidth = 1.5;
+        // Crystalline low-poly wooden stairs
         for (let i = 0; i < 4; i++) {
             const sy = py + i * 10;
-            ctx.beginPath();
-            ctx.moveTo(px, sy);
-            ctx.lineTo(px + CELL_SIZE, sy);
-            ctx.stroke();
+            // Top face of the step
+            drawLowPolyFacet(ctx, [
+                {x: px, y: sy},
+                {x: px + CELL_SIZE, y: sy},
+                {x: px + CELL_SIZE, y: sy + 7},
+                {x: px, y: sy + 7}
+            ], {x: 0, y: -0.3, z: 0.95}, '#dfc3a7');
 
-            // shade
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-            ctx.fillRect(px, sy + 7, CELL_SIZE, 3);
+            // Riser face of the step (shadowed riser)
+            drawLowPolyFacet(ctx, [
+                {x: px, y: sy + 7},
+                {x: px + CELL_SIZE, y: sy + 7},
+                {x: px + CELL_SIZE, y: sy + 10},
+                {x: px, y: sy + 10}
+            ], {x: 0, y: 0.8, z: 0.6}, '#b58f70');
         }
 
-        // Side handrails
-        ctx.strokeStyle = '#8c5225';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(px + 2, py);
-        ctx.lineTo(px + 2, py + CELL_SIZE);
-        ctx.moveTo(px + CELL_SIZE - 2, py);
-        ctx.lineTo(px + CELL_SIZE - 2, py + CELL_SIZE);
-        ctx.stroke();
+        // Side handrails (beveled)
+        drawLowPolyFacet(ctx, [
+            {x: px + 1, y: py},
+            {x: px + 3, y: py},
+            {x: px + 3, y: py + CELL_SIZE},
+            {x: px + 1, y: py + CELL_SIZE}
+        ], {x: -0.5, y: 0, z: 0.86}, '#8c5225');
+
+        drawLowPolyFacet(ctx, [
+            {x: px + CELL_SIZE - 3, y: py},
+            {x: px + CELL_SIZE - 1, y: py},
+            {x: px + CELL_SIZE - 1, y: py + CELL_SIZE},
+            {x: px + CELL_SIZE - 3, y: py + CELL_SIZE}
+        ], {x: 0.5, y: 0, z: 0.86}, '#8c5225');
     } else {
         // Cozy Office Carpet Runner Path (Beige/Cream)
-        ctx.fillStyle = '#eed8c9';
-        ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+        const v0 = {x: px, y: py};
+        const v1 = {x: px + CELL_SIZE, y: py};
+        const v2 = {x: px + CELL_SIZE, y: py + CELL_SIZE};
+        const v3 = {x: px, y: py + CELL_SIZE};
+        const vc = {x: px + CELL_SIZE / 2, y: py + CELL_SIZE / 2};
 
-        // Brown carpet borders
-        ctx.strokeStyle = '#bd9a7a';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
-
-        // Carpet texture dots
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(px + 6, py + 8, 2, 2);
-        ctx.fillRect(px + 20, py + 22, 2, 2);
-        ctx.fillRect(px + 30, py + 12, 2, 2);
+        drawLowPolyFacet(ctx, [v0, v1, vc], {x: 0, y: -0.3, z: 0.954}, '#eed8c9');
+        drawLowPolyFacet(ctx, [v1, v2, vc], {x: 0.3, y: 0, z: 0.954}, '#eed8c9');
+        drawLowPolyFacet(ctx, [v2, v3, vc], {x: 0, y: 0.3, z: 0.954}, '#eed8c9');
+        drawLowPolyFacet(ctx, [v3, v0, vc], {x: -0.3, y: 0, z: 0.954}, '#eed8c9');
     }
 }
 
@@ -120,147 +172,132 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
     const isWallRow = row === 0 || row === 3 || row === 6 || row === 9;
 
     if (isWallRow) {
+        let baseColor = '#9fc0a6';
         if (row === 0) {
-            // Floor 4: IT Office Wall (Sage Green)
-            ctx.fillStyle = '#9fc0a6'; 
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(px, py + CELL_SIZE - 4, CELL_SIZE, 4);
+            baseColor = '#9fc0a6'; // Sage green
+        } else if (row === 3) {
+            baseColor = '#2c3e50'; // Dark Blue-Grey
+        } else if (row === 6) {
+            baseColor = '#f5f6fa'; // Clean White/Cream
+        } else if (row === 9) {
+            baseColor = '#1e272e'; // Dim Midnight Blue
+        }
 
-            // Wall clock
-            if (col === 5) {
-                ctx.fillStyle = '#85583f'; // wood rim
-                ctx.beginPath();
-                ctx.arc(px + 20, py + 16, 7, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ffffff'; // face
-                ctx.beginPath();
-                ctx.arc(px + 20, py + 16, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#2f3542';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(px + 20, py + 16); ctx.lineTo(px + 20, py + 13);
-                ctx.moveTo(px + 20, py + 16); ctx.lineTo(px + 23, py + 16);
-                ctx.stroke();
+        // Draw low-poly wall block (split-bevel)
+        // Top bevel face
+        drawLowPolyFacet(ctx, [
+            {x: px, y: py},
+            {x: px + CELL_SIZE, y: py},
+            {x: px + CELL_SIZE, y: py + 8},
+            {x: px, y: py + 8}
+        ], {x: 0, y: -0.5, z: 0.86}, baseColor);
+
+        // Front wall face
+        drawLowPolyFacet(ctx, [
+            {x: px, y: py + 8},
+            {x: px + CELL_SIZE, y: py + 8},
+            {x: px + CELL_SIZE, y: py + CELL_SIZE},
+            {x: px, y: py + CELL_SIZE}
+        ], {x: 0, y: 0.8, z: 0.6}, baseColor);
+
+        // Decorations on walls
+        if (row === 0 && col === 5) {
+            // Octagon Wall Clock (instead of circle)
+            const cx = px + 20, cy = py + 18;
+            const r1 = 7, r2 = 5;
+            const pointsOuter = [];
+            const pointsInner = [];
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4;
+                pointsOuter.push({ x: cx + Math.cos(angle) * r1, y: cy + Math.sin(angle) * r1 });
+                pointsInner.push({ x: cx + Math.cos(angle) * r2, y: cy + Math.sin(angle) * r2 });
             }
-        } 
+            drawLowPolyFacet(ctx, pointsOuter, {x: 0, y: 0.8, z: 0.6}, '#85583f');
+            drawLowPolyFacet(ctx, pointsInner, {x: 0, y: 0.8, z: 0.6}, '#ffffff');
+            ctx.strokeStyle = '#2f3542';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 3);
+            ctx.moveTo(cx, cy); ctx.lineTo(cx + 3, cy);
+            ctx.stroke();
+        }
         else if (row === 3) {
-            // Floor 3: Server Room Wall (Dark Blue-Grey with LEDs)
-            ctx.fillStyle = '#2c3e50'; 
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.fillStyle = '#7f8c8d';
-            ctx.fillRect(px, py + CELL_SIZE - 4, CELL_SIZE, 4);
-
-            // Blinking LEDs
+            // Blinking LEDs (Octahedron status bulbs)
             const blink = Math.floor(Date.now() / 400) % 2 === 0;
-            ctx.fillStyle = blink ? '#2ecc71' : '#27ae60'; // green LED
-            ctx.fillRect(px + 12, py + 14, 2, 2);
-            ctx.fillStyle = !blink ? '#e74c3c' : '#c0392b'; // red LED
-            ctx.fillRect(px + 22, py + 14, 2, 2);
+            const drawLed = (cx, cy, color) => {
+                const pts = [
+                    {x: cx, y: cy - 3},
+                    {x: cx + 2, y: cy},
+                    {x: cx, y: cy + 3},
+                    {x: cx - 2, y: cy}
+                ];
+                drawLowPolyFacet(ctx, pts, {x: 0, y: 0.8, z: 0.6}, color);
+            };
+            drawLed(px + 13, py + 16, blink ? '#2ecc71' : '#27ae60');
+            drawLed(px + 23, py + 16, !blink ? '#e74c3c' : '#c0392b');
         }
-        else if (row === 6) {
-            // Floor 2: Meeting Room Wall (Clean White/Cream)
-            ctx.fillStyle = '#f5f6fa'; 
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.fillStyle = '#52665d'; // wood board base
-            ctx.fillRect(px, py + CELL_SIZE - 4, CELL_SIZE, 4);
-
-            // Project WBS Chart Frame
-            if (col === 4) {
-                ctx.fillStyle = '#85583f'; // brown frame
-                ctx.fillRect(px + 6, py + 4, 28, 22);
-                ctx.fillStyle = '#ffffff'; // canvas
-                ctx.fillRect(px + 8, py + 6, 24, 18);
-                // chart lines (WBS scheduling bars)
-                ctx.fillStyle = '#2ecc71';
-                ctx.fillRect(px + 10, py + 10, 8, 3);
-                ctx.fillStyle = '#e67e22';
-                ctx.fillRect(px + 15, py + 15, 12, 3);
-                ctx.fillStyle = '#e74c3c';
-                ctx.fillRect(px + 20, py + 20, 5, 3);
-            }
+        else if (row === 6 && col === 4) {
+            // Project WBS Chart Frame (Faceted blocks)
+            ctx.fillStyle = '#85583f';
+            ctx.fillRect(px + 6, py + 6, 28, 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px + 8, py + 8, 24, 16);
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(px + 10, py + 11, 8, 3);
+            ctx.fillStyle = '#e67e22';
+            ctx.fillRect(px + 14, py + 15, 12, 3);
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(px + 19, py + 19, 6, 3);
         }
-        else if (row === 9) {
-            // Floor 1: Overtime Dev Team Wall (Dim Midnight Blue)
-            ctx.fillStyle = '#1e272e'; 
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.fillStyle = '#2f3542';
-            ctx.fillRect(px, py + CELL_SIZE - 4, CELL_SIZE, 4);
-
-            // Blinking terminal cursor decoration
-            if (col === 8) {
-                ctx.font = '8px "Press Start 2P"';
-                ctx.fillStyle = '#00ff66'; // terminal green
-                const showCursor = Math.floor(Date.now() / 500) % 2 === 0;
-                ctx.fillText('>', px + 10, py + 18);
-                if (showCursor) ctx.fillRect(px + 22, py + 12, 6, 8);
+        else if (row === 9 && col === 8) {
+            // Blinking terminal cursor
+            const showCursor = Math.floor(Date.now() / 500) % 2 === 0;
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillStyle = '#00ff66';
+            ctx.fillText('>', px + 10, py + 20);
+            if (showCursor) {
+                // Draw a 3D block style cursor
+                drawLowPolyFacet(ctx, [
+                    {x: px + 22, y: py + 12},
+                    {x: px + 28, y: py + 12},
+                    {x: px + 28, y: py + 20},
+                    {x: px + 22, y: py + 20}
+                ], {x: 0, y: 0.8, z: 0.6}, '#00ff66');
             }
         }
     } else {
-        // Floor plank textures
+        let baseColor = '#ced6e0';
         if (row < 3) {
-            // Floor 4: IT Office Light Wood
-            ctx.fillStyle = '#f2ddc6';
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.strokeStyle = '#dfc3a7';
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(px, py); ctx.lineTo(px + CELL_SIZE, py);
-            ctx.moveTo(px, py + 16); ctx.lineTo(px + CELL_SIZE, py + 16);
-            ctx.moveTo(px, py + 32); ctx.lineTo(px + CELL_SIZE, py + 32);
-            ctx.stroke();
+            baseColor = '#f2ddc6'; // Floor 4: Wood light
+        } else if (row < 6) {
+            baseColor = '#57606f'; // Floor 3: Metal plates
+        } else if (row < 9) {
+            baseColor = '#b77c57'; // Floor 2: Mahogany
+        } else {
+            baseColor = '#353b48'; // Floor 1: Dim grey
         }
-        else if (row < 6) {
-            // Floor 3: Server Room Cold Metal Plates
-            ctx.fillStyle = '#57606f';
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.strokeStyle = '#2f3542';
-            ctx.lineWidth = 1.2;
-            ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
-            
-            // Rivets on corners
-            ctx.fillStyle = '#2f3542';
-            ctx.fillRect(px + 2, py + 2, 1.5, 1.5);
-            ctx.fillRect(px + CELL_SIZE - 3.5, py + 2, 1.5, 1.5);
-            ctx.fillRect(px + 2, py + CELL_SIZE - 3.5, 1.5, 1.5);
-            ctx.fillRect(px + CELL_SIZE - 3.5, py + CELL_SIZE - 3.5, 1.5, 1.5);
-        }
-        else if (row < 9) {
-            // Floor 2: Meeting Room Warm Mahogany Planks
-            ctx.fillStyle = '#b77c57';
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.strokeStyle = '#85583f';
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(px, py); ctx.lineTo(px + CELL_SIZE, py);
-            ctx.moveTo(px, py + 20); ctx.lineTo(px + CELL_SIZE, py + 20);
-            ctx.stroke();
-        }
-        else {
-            // Floor 1: Overtime Dev Team Dim Grey Tiles
-            ctx.fillStyle = '#353b48';
-            ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-            ctx.strokeStyle = '#2f3542';
-            ctx.lineWidth = 1.2;
-            ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
 
-            // Cable traces on floor (matrix lines/wires)
-            if ((col + row) % 4 === 0) {
-                ctx.strokeStyle = '#1e272e';
-                ctx.lineWidth = 2.0;
-                ctx.beginPath();
-                ctx.moveTo(px + 10, py);
-                ctx.lineTo(px + 20, py + CELL_SIZE);
-                ctx.stroke();
-            }
-        }
+        // Triangulate each floor cell into 4 triangles
+        const v0 = {x: px, y: py};
+        const v1 = {x: px + CELL_SIZE, y: py};
+        const v2 = {x: px + CELL_SIZE, y: py + CELL_SIZE};
+        const v3 = {x: px, y: py + CELL_SIZE};
+        const vc = {x: px + CELL_SIZE / 2, y: py + CELL_SIZE / 2};
+
+        drawLowPolyFacet(ctx, [v0, v1, vc], {x: 0, y: -0.35, z: 0.936}, baseColor);
+        drawLowPolyFacet(ctx, [v1, v2, vc], {x: 0.35, y: 0, z: 0.936}, baseColor);
+        drawLowPolyFacet(ctx, [v2, v3, vc], {x: 0, y: 0.35, z: 0.936}, baseColor);
+        drawLowPolyFacet(ctx, [v3, v0, vc], {x: -0.35, y: 0, z: 0.936}, baseColor);
     }
 
-    // Platform bottom edge lip (3D depth)
+    // Platform bottom edge lip (3D depth) - beveled
     if (row === 2 || row === 5 || row === 8 || row === 11) {
-        ctx.fillStyle = '#3c2517'; // Warm dark wood shadow edge
-        ctx.fillRect(px, py + CELL_SIZE - 6, CELL_SIZE, 6);
+        drawLowPolyFacet(ctx, [
+            {x: px, y: py + CELL_SIZE - 6},
+            {x: px + CELL_SIZE, y: py + CELL_SIZE - 6},
+            {x: px + CELL_SIZE, y: py + CELL_SIZE},
+            {x: px, y: py + CELL_SIZE}
+        ], {x: 0, y: 0.9, z: 0.43}, '#3c2517');
     }
 
     // Draw Props on unoccupied non-wall cells
@@ -588,7 +625,8 @@ class Enemy {
             this.bugCooldown -= dt;
             if (this.bugCooldown <= 0) {
                 this.fireBugReport();
-                this.bugCooldown = (this.type === 'ceo_boss' ? 1500 : 3000) + Math.random() * 1500;
+                const waveFactor = Math.max(0.4, 1.0 - (this.waveNum - 1) * 0.12);
+                this.bugCooldown = ((this.type === 'ceo_boss' ? 1200 : 2500) + Math.random() * 1000) * waveFactor;
             }
         }
 
@@ -624,269 +662,354 @@ class Enemy {
 
         ctx.save();
         
-        // Draw drop shadow on the floor (anchored, no bobbing)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 11, this.isBoss ? 24 : 11, this.isBoss ? 8 : 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Bobbing floating effect
+        const size = this.isBoss ? 36 : 18;
         const bob = Math.sin(this.bobOffset) * 1.5;
-        const size = this.isBoss ? 28 : 14;
+        
+        // Draw drop shadow on the floor (anchored projected low-poly shadow)
+        const shadowPts = [
+            { x: this.x - size, y: this.y },
+            { x: this.x, y: this.y - size * 0.5 },
+            { x: this.x + size, y: this.y },
+            { x: this.x, y: this.y + size * 0.5 }
+        ];
+        drawProjectedShadow(ctx, shadowPts, 12);
 
-        if (false && spritesLoaded) {
-            const cols = 8;
-            const rows = 12;
-            const cellW = jrpgSprites.width / cols;
-            const cellH = jrpgSprites.height / rows;
+        // Helper for face normal in 3D (to support backface culling & correct shading)
+        const getNormal = (A, B, C) => {
+            const ux = B.x - A.x, uy = B.y - A.y, uz = B.z - A.z;
+            const vx = C.x - A.x, vy = C.y - A.y, vz = C.z - A.z;
+            const nx = uy * vz - uz * vy;
+            const ny = uz * vx - ux * vz;
+            const nz = ux * vy - uy * vx;
+            const len = Math.hypot(nx, ny, nz) || 1;
+            return { x: nx / len, y: ny / len, z: nz / len };
+        };
 
-            let rowIdx = 7; // Green slime row
-            if (this.type === 'doc_bomber') rowIdx = 8;     // Skeleton row
-            else if (this.type === 'urgent') rowIdx = 9;    // Wolf row
-            else if (this.type === 'qa_bugger') rowIdx = 10; // Shaman row
-            else if (this.type === 'ceo_boss') rowIdx = 11;  // Dragon row
+        // Procedural Low-Poly IT Company Monster Drawings
+        if (this.type === 'spec_adder') {
+            // 요구사항 변경: A flying origami paper document flapping in 3D
+            const wingSway = Math.sin(Date.now() / 150) * 5;
+            
+            // Left wing
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 18, y: this.y - 6 + wingSway + bob },
+                { x: this.x, y: this.y - 12 + bob },
+                { x: this.x, y: this.y + 6 + bob }
+            ], { x: -0.5, y: 0.2, z: 0.84 }, '#f5f6fa');
 
-            const frame = Math.floor(Date.now() / 150) % 4; // 4-frame animation
-            ctx.drawImage(
-                jrpgSprites, 
-                frame * cellW, rowIdx * cellH, cellW, cellH, 
-                this.x - size, this.y - size + bob, size * 2, size * 2
-            );
-        } else {
-            // Procedural IT Company Monster Drawings
-            if (this.type === 'spec_adder') {
-                // 요구사항 변경: A flying document sheet with folded corner and question marks
-                ctx.save();
-                ctx.fillStyle = '#ffffff'; // white paper
-                ctx.strokeStyle = '#2f3542';
-                ctx.lineWidth = 1.5;
-                
-                // Draw a small slanted rectangular page
-                ctx.beginPath();
-                ctx.moveTo(this.x - 10, this.y - 12 + bob);
-                ctx.lineTo(this.x + 6, this.y - 12 + bob);
-                ctx.lineTo(this.x + 10, this.y - 8 + bob); // Folded corner start
-                ctx.lineTo(this.x + 10, this.y + 12 + bob);
-                ctx.lineTo(this.x - 10, this.y + 12 + bob);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+            // Right wing
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 18, y: this.y - 6 + wingSway + bob },
+                { x: this.x, y: this.y - 12 + bob },
+                { x: this.x, y: this.y + 6 + bob }
+            ], { x: 0.5, y: 0.2, z: 0.84 }, '#f5f6fa');
 
-                // Folded corner flap
-                ctx.fillStyle = '#dfe4ea';
-                ctx.beginPath();
-                ctx.moveTo(this.x + 6, this.y - 12 + bob);
-                ctx.lineTo(this.x + 6, this.y - 8 + bob);
-                ctx.lineTo(this.x + 10, this.y - 8 + bob);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+            // Spine left
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 4, y: this.y + 12 + bob },
+                { x: this.x, y: this.y - 12 + bob },
+                { x: this.x, y: this.y + 6 + bob }
+            ], { x: -0.2, y: 0.6, z: 0.77 }, '#dcdde1');
 
-                // Draw lines of 'code' on the document
-                ctx.strokeStyle = '#f39c12'; // orange text lines
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(this.x - 6, this.y - 4 + bob); ctx.lineTo(this.x + 6, this.y - 4 + bob);
-                ctx.moveTo(this.x - 6, this.y + bob);     ctx.lineTo(this.x + 4, this.y + bob);
-                ctx.moveTo(this.x - 6, this.y + 4 + bob); ctx.lineTo(this.x + 6, this.y + 4 + bob);
-                ctx.stroke();
+            // Spine right
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 4, y: this.y + 12 + bob },
+                { x: this.x, y: this.y - 12 + bob },
+                { x: this.x, y: this.y + 6 + bob }
+            ], { x: 0.2, y: 0.6, z: 0.77 }, '#dcdde1');
 
-                // Warning / Addition symbol (+ symbol inside circle)
-                ctx.save();
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = '#e67e22';
-                ctx.fillStyle = '#e67e22';
-                ctx.beginPath();
-                ctx.arc(this.x + 6, this.y + 6 + bob, 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
+            // Orange folded corner flaps
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 8, y: this.y - 2 + bob },
+                { x: this.x - 4, y: this.y - 8 + bob },
+                { x: this.x, y: this.y - 4 + bob }
+            ], { x: -0.3, y: -0.3, z: 0.9 }, '#e67e22');
 
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(this.x + 4, this.y + 6 + bob); ctx.lineTo(this.x + 8, this.y + 6 + bob);
-                ctx.moveTo(this.x + 6, this.y + 4 + bob); ctx.lineTo(this.x + 6, this.y + 8 + bob);
-                ctx.stroke();
-                ctx.restore();
-            } 
-            else if (this.type === 'doc_bomber') {
-                // 레거시 코드: A dusty brown heavy stone block with cobwebs and red 'LEGACY' text
-                ctx.save();
-                ctx.fillStyle = '#57606f'; // Dark charcoal stone
-                ctx.strokeStyle = '#2f3542';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 13, this.y - 12 + bob, 26, 24, 2);
-                ctx.fill();
-                ctx.stroke();
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 8, y: this.y - 2 + bob },
+                { x: this.x + 4, y: this.y - 8 + bob },
+                { x: this.x, y: this.y - 4 + bob }
+            ], { x: 0.3, y: -0.3, z: 0.9 }, '#e67e22');
+        } 
+        else if (this.type === 'doc_bomber') {
+            // 레거시 코드: A solid 3D granite stone obelisk (truncated pyramid) with cracks
+            const w1 = 14, w2 = 8, h = 26;
+            const pts3d = [
+                { x: -w1, y: h/2, z: -w1 },  // 0: bottom back left
+                { x: w1, y: h/2, z: -w1 },   // 1: bottom back right
+                { x: w1, y: h/2, z: w1 },    // 2: bottom front right
+                { x: -w1, y: h/2, z: w1 },   // 3: bottom front left
+                { x: -w2, y: -h/2, z: -w2 }, // 4: top back left
+                { x: w2, y: -h/2, z: -w2 },  // 5: top back right
+                { x: w2, y: -h/2, z: w2 },   // 6: top front right
+                { x: -w2, y: -h/2, z: w2 }   // 7: top front left
+            ];
+            
+            // Slightly tilted for 3D look
+            const rotX = 0.2, rotY = -0.3;
+            const proj = pts3d.map(v => project3D(v.x, v.y, v.z, rotX, rotY, 0, this.x, this.y + bob));
 
-                // Stone texture cracks
-                ctx.strokeStyle = '#2f3542';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(this.x - 10, this.y - 10 + bob); ctx.lineTo(this.x - 4, this.y - 4 + bob);
-                ctx.moveTo(this.x + 6, this.y + 8 + bob);  ctx.lineTo(this.x + 10, this.y + 2 + bob);
-                ctx.stroke();
+            // Visible faces drawing
+            drawLowPolyFacet(ctx, [proj[3], proj[2], proj[6], proj[7]], { x: 0, y: 0.2, z: 0.98 }, '#57606f');
+            drawLowPolyFacet(ctx, [proj[7], proj[6], proj[5], proj[4]], { x: 0, y: -0.9, z: 0.43 }, '#747d8c');
+            drawLowPolyFacet(ctx, [proj[0], proj[3], proj[7], proj[4]], { x: -0.98, y: 0.2, z: 0 }, '#2f3542');
+            drawLowPolyFacet(ctx, [proj[2], proj[1], proj[5], proj[6]], { x: 0.98, y: 0.2, z: 0 }, '#2c3e50');
 
-                // Red 'LEGACY' text with glowing shadow
-                ctx.save();
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = '#ff7675';
-                ctx.fillStyle = '#ff7675';
-                ctx.font = 'bold 8px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('LEGACY', this.x, this.y + 4 + bob);
-                ctx.restore();
-                ctx.restore();
-            }
-            else if (this.type === 'urgent') {
-                // 긴급 장애: A flashing red siren light box
-                ctx.save();
-                // Siren base (dark grey metal)
-                ctx.fillStyle = '#2f3542';
-                ctx.strokeStyle = '#1e272e';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 11, this.y + 2 + bob, 22, 10, 1);
-                ctx.fill();
-                ctx.stroke();
+            // Draw glowing red cracks
+            ctx.strokeStyle = '#ff7675';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(proj[7].x, proj[7].y);
+            ctx.lineTo((proj[7].x + proj[2].x)/2 + 2, (proj[7].y + proj[2].y)/2 - 1);
+            ctx.lineTo(proj[2].x - 3, proj[2].y - 2);
+            ctx.stroke();
 
-                // Siren red light bulb
-                const isBright = Math.floor(Date.now() / 150) % 2 === 0;
-                ctx.fillStyle = isBright ? '#ff7675' : '#d63031';
-                ctx.shadowBlur = isBright ? 12 : 0;
-                ctx.shadowColor = '#ff7675';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y + 2 + bob, 8, Math.PI, 0);
-                ctx.fill();
-                ctx.stroke();
+            // 'LEGACY' indicator tag
+            ctx.fillStyle = '#ff7675';
+            ctx.font = 'bold 7px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('LEGACY', this.x, this.y + 4 + bob);
+        }
+        else if (this.type === 'urgent') {
+            // 긴급 장애: Flashing red siren octahedron bulb on grey low-poly metal base
+            // Base
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 14, y: this.y + 6 + bob },
+                { x: this.x + 14, y: this.y + 6 + bob },
+                { x: this.x + 10, y: this.y + 1 + bob },
+                { x: this.x - 10, y: this.y + 1 + bob }
+            ], { x: 0, y: -0.5, z: 0.86 }, '#2f3542');
 
-                // Light ray effect
-                if (isBright) {
-                    ctx.strokeStyle = 'rgba(255, 118, 117, 0.45)';
-                    ctx.lineWidth = 1.5;
-                    for (let angle = -Math.PI * 0.8; angle < -Math.PI * 0.2; angle += Math.PI / 4) {
-                        ctx.beginPath();
-                        ctx.moveTo(this.x, this.y + 2 + bob);
-                        ctx.lineTo(this.x + Math.cos(angle) * 16, this.y + 2 + Math.sin(angle) * 16 + bob);
-                        ctx.stroke();
-                    }
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 14, y: this.y + 6 + bob },
+                { x: this.x + 14, y: this.y + 6 + bob },
+                { x: this.x + 16, y: this.y + 12 + bob },
+                { x: this.x - 16, y: this.y + 12 + bob }
+            ], { x: 0, y: 0.8, z: 0.6 }, '#1e222b');
+
+            // Octahedron vertices
+            const R = 13;
+            const pts3d = [
+                { x: 0, y: -R, z: 0 },
+                { x: 0, y: R, z: 0 },
+                { x: -R, y: 0, z: -R },
+                { x: R, y: 0, z: -R },
+                { x: R, y: 0, z: R },
+                { x: -R, y: 0, z: R }
+            ];
+
+            const rotX = Date.now() / 150;
+            const rotY = Date.now() / 100;
+
+            const rotated = pts3d.map(v => {
+                let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                return { x: x1, y: y2, z: z2 };
+            });
+
+            const proj = rotated.map(r => {
+                const dist = 120;
+                const scale = 1.0 / (1.0 + r.z / dist);
+                return { x: this.x + r.x * scale, y: this.y - 4 + bob + r.y * scale };
+            });
+
+            const isBright = Math.floor(Date.now() / 150) % 2 === 0;
+            const bulbColor = isBright ? '#ff4757' : '#b31522';
+
+            const faces = [
+                [0, 5, 4], [0, 4, 3], [0, 3, 2], [0, 2, 5],
+                [1, 4, 5], [1, 3, 4], [1, 2, 3], [1, 5, 2]
+            ];
+
+            // Render visible faces
+            faces.forEach(f => {
+                const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
+                if (norm.z > 0) {
+                    drawLowPolyFacet(ctx, [proj[f[0]], proj[f[1]], proj[f[2]]], norm, bulbColor);
                 }
-                ctx.restore();
-            }
-            else if (this.type === 'qa_bugger') {
-                // QA 재오픈: A crawling purple/blue beetle bug with cute feelers and green glow eyes
-                ctx.save();
-                ctx.fillStyle = '#8854d0'; // Purple body
-                ctx.strokeStyle = '#2f3542';
+            });
+
+            // Flashing light rays
+            if (isBright) {
+                ctx.strokeStyle = 'rgba(255, 71, 87, 0.4)';
                 ctx.lineWidth = 1.5;
+                for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y - 4 + bob);
+                    ctx.lineTo(this.x + Math.cos(angle) * 22, this.y - 4 + bob + Math.sin(angle) * 22);
+                    ctx.stroke();
+                }
+            }
+        }
+        else if (this.type === 'qa_bugger') {
+            // QA 재오픈: Purple cyber beetle bug with animated needle legs
+            // Octahedron purple body
+            const R = 9;
+            const pts3d = [
+                { x: 0, y: -R, z: 0 },
+                { x: 0, y: R, z: 0 },
+                { x: -R, y: 0, z: -R },
+                { x: R, y: 0, z: -R },
+                { x: R, y: 0, z: R },
+                { x: -R, y: 0, z: R }
+            ];
 
-                // Legs
-                const legMove = Math.sin(Date.now() / 100) * 3;
-                ctx.beginPath();
-                // Left legs
-                ctx.moveTo(this.x - 5, this.y + bob); ctx.lineTo(this.x - 12, this.y - 2 - legMove + bob);
-                ctx.moveTo(this.x - 5, this.y + bob); ctx.lineTo(this.x - 13, this.y + bob);
-                ctx.moveTo(this.x - 5, this.y + bob); ctx.lineTo(this.x - 12, this.y + 2 + legMove + bob);
-                // Right legs
-                ctx.moveTo(this.x + 5, this.y + bob); ctx.lineTo(this.x + 12, this.y - 2 + legMove + bob);
-                ctx.moveTo(this.x + 5, this.y + bob); ctx.lineTo(this.x + 13, this.y + bob);
-                ctx.moveTo(this.x + 5, this.y + bob); ctx.lineTo(this.x + 12, this.y + 2 - legMove + bob);
-                ctx.stroke();
+            const rotX = 0.3;
+            const rotY = Date.now() / 250;
 
-                // Main body shape (oval)
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y + bob, 9, 7, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+            const rotated = pts3d.map(v => {
+                let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                return { x: x1, y: y2, z: z2 };
+            });
 
-                // Bug head (small circle on top)
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 7 + bob, 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+            const proj = rotated.map(r => {
+                const dist = 120;
+                const scale = 1.0 / (1.0 + r.z / dist);
+                return { x: this.x + r.x * scale, y: this.y + bob + r.y * scale };
+            });
 
-                // Antenna
-                ctx.beginPath();
-                ctx.moveTo(this.x - 2, this.y - 11 + bob);
-                ctx.quadraticCurveTo(this.x - 5, this.y - 15 + bob, this.x - 8, this.y - 13 + bob);
-                ctx.moveTo(this.x + 2, this.y - 11 + bob);
-                ctx.quadraticCurveTo(this.x + 5, this.y - 15 + bob, this.x + 8, this.y - 13 + bob);
-                ctx.stroke();
+            const faces = [
+                [0, 5, 4], [0, 4, 3], [0, 3, 2], [0, 2, 5],
+                [1, 4, 5], [1, 3, 4], [1, 2, 3], [1, 5, 2]
+            ];
 
-                // Glowing green eyes
-                ctx.save();
-                ctx.shadowBlur = 6;
-                ctx.shadowColor = '#2ecc71';
+            faces.forEach(f => {
+                const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
+                if (norm.z > 0) {
+                    drawLowPolyFacet(ctx, [proj[f[0]], proj[f[1]], proj[f[2]]], norm, '#8854d0');
+                }
+            });
+
+            // Head (tetrahedron at front)
+            const headPts = [
+                { x: 0, y: -4, z: 8 },
+                { x: -4, y: 0, z: 4 },
+                { x: 4, y: 0, z: 4 },
+                { x: 0, y: 3, z: 4 }
+            ];
+            const headProj = headPts.map(v => {
+                const dist = 120;
+                const scale = 1.0 / (1.0 + v.z / dist);
+                return { x: this.x + v.x * scale, y: this.y - 7 + bob + v.y * scale };
+            });
+            drawLowPolyFacet(ctx, [headProj[0], headProj[1], headProj[2]], { x: 0, y: -0.3, z: 0.95 }, '#571f9c');
+            drawLowPolyFacet(ctx, [headProj[0], headProj[2], headProj[3]], { x: 0.8, y: 0.5, z: 0.3 }, '#3d1273');
+            drawLowPolyFacet(ctx, [headProj[0], headProj[3], headProj[1]], { x: -0.8, y: 0.5, z: 0.3 }, '#3d1273');
+
+            // Glowing green eyes (diamonds)
+            const drawEye = (cx, cy) => {
                 ctx.fillStyle = '#2ecc71';
                 ctx.beginPath();
-                ctx.arc(this.x - 1.5, this.y - 7.5 + bob, 1.2, 0, Math.PI * 2);
-                ctx.arc(this.x + 1.5, this.y - 7.5 + bob, 1.2, 0, Math.PI * 2);
+                ctx.moveTo(cx, cy - 2);
+                ctx.lineTo(cx + 2, cy);
+                ctx.lineTo(cx, cy + 2);
+                ctx.lineTo(cx - 2, cy);
+                ctx.closePath();
                 ctx.fill();
-                ctx.restore();
-                ctx.restore();
+            };
+            drawEye(this.x - 3, this.y - 8 + bob);
+            drawEye(this.x + 3, this.y - 8 + bob);
+
+            // Animated walking legs (needle segments)
+            const legCycle = Date.now() / 80;
+            const drawLegSegment = (x1, y1, x2, y2) => {
+                const dx = x2 - x1, dy = y2 - y1;
+                const len = Math.hypot(dx, dy) || 1;
+                const nx = -dy / len * 1.5, ny = dx / len * 1.5;
+                drawLowPolyFacet(ctx, [
+                    { x: x1 - nx, y: y1 - ny },
+                    { x: x1 + nx, y: y1 + ny },
+                    { x: x2, y: y2 }
+                ], { x: 0, y: 0, z: 1.0 }, '#3d1273');
+            };
+
+            for (let i = 0; i < 6; i++) {
+                const isLeft = i < 3;
+                const legIdx = i % 3;
+                const angleOffset = legIdx * Math.PI / 3;
+                const kneeX = this.x + (isLeft ? -12 : 12) + Math.cos(legCycle + angleOffset) * 3;
+                const kneeY = this.y - 2 + Math.sin(legCycle + angleOffset) * 3 + bob;
+                const footX = this.x + (isLeft ? -20 : 20) + Math.cos(legCycle + angleOffset + 0.5) * 4;
+                const footY = this.y + 11 + Math.sin(legCycle + angleOffset + 0.5) * 2 + bob;
+
+                drawLegSegment(this.x + (isLeft ? -4 : 4), this.y + bob, kneeX, kneeY);
+                drawLegSegment(kneeX, kneeY, footX, footY);
             }
-            else if (this.type === 'ceo_boss') {
-                // 운영 배포 사고: A huge black server rack block with warning lights, fire flames, and smoke
-                ctx.save();
-                
-                // Server rack frame
-                ctx.fillStyle = '#1e272e';
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 20, this.y - 28 + bob, 40, 48, 3);
-                ctx.fill();
-                ctx.stroke();
+        }
+        else if (this.type === 'ceo_boss') {
+            // 운영 배포 사고: Giant 3-Column Server Monolith
+            const drawBox = (cx, cy, w, h, d, baseColor) => {
+                const w2 = w/2, h2 = h/2, d2 = d/2;
+                const pts3d = [
+                    { x: cx - w2, y: cy + h2, z: -d2 },  // 0: bottom back left
+                    { x: cx + w2, y: cy + h2, z: -d2 },  // 1: bottom back right
+                    { x: cx + w2, y: cy + h2, z: d2 },   // 2: bottom front right
+                    { x: cx - w2, y: cy + h2, z: d2 },   // 3: bottom front left
+                    { x: cx - w2, y: cy - h2, z: -d2 },  // 4: top back left
+                    { x: cx + w2, y: cy - h2, z: -d2 },  // 5: top back right
+                    { x: cx + w2, y: cy - h2, z: d2 },   // 6: top front right
+                    { x: cx - w2, y: cy - h2, z: d2 }    // 7: top front left
+                ];
 
-                // Shelves / Grills with blinking red/yellow LED indicators
-                ctx.fillStyle = '#2f3542';
-                for (let i = 0; i < 5; i++) {
-                    const sy = this.y - 22 + i * 8 + bob;
-                    ctx.fillRect(this.x - 16, sy, 32, 5);
-                    
-                    // blink LEDs
-                    const blink = Math.floor(Date.now() / 250 + i) % 2 === 0;
-                    ctx.fillStyle = blink ? '#eb3b5a' : '#4b1420'; // red/dark red
-                    ctx.fillRect(this.x - 12, sy + 1.5, 2, 2);
-                    ctx.fillStyle = !blink ? '#f1c40f' : '#7f6a00'; // yellow/dark yellow
-                    ctx.fillRect(this.x - 8, sy + 1.5, 2, 2);
-                    ctx.fillStyle = '#2f3542'; // reset for next shelf background
-                }
+                const rotX = 0.15, rotY = -0.15;
+                const proj = pts3d.map(v => project3D(v.x, v.y, v.z, rotX, rotY, 0, this.x, this.y + bob));
 
-                // Center screen warning message 'CRITICAL OUTAGE' with hot red glow
-                ctx.save();
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#eb3b5a';
-                ctx.fillStyle = 'rgba(235, 59, 90, 0.25)';
-                ctx.fillRect(this.x - 14, this.y - 3 + bob, 28, 9);
-                ctx.strokeStyle = '#eb3b5a';
-                ctx.lineWidth = 1.5;
-                ctx.strokeRect(this.x - 14, this.y - 3 + bob, 28, 9);
-                ctx.restore();
-                
-                ctx.fillStyle = '#ff7675';
-                ctx.font = 'bold 5px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('OUTAGE', this.x, this.y + 3 + bob);
+                // Visible faces
+                drawLowPolyFacet(ctx, [proj[3], proj[2], proj[6], proj[7]], { x: 0, y: 0.2, z: 0.98 }, baseColor);
+                drawLowPolyFacet(ctx, [proj[7], proj[6], proj[5], proj[4]], { x: 0, y: -0.9, z: 0.43 }, scaleColor(baseColor, 1.25));
+                drawLowPolyFacet(ctx, [proj[0], proj[3], proj[7], proj[4]], { x: -0.98, y: 0.2, z: 0 }, scaleColor(baseColor, 0.8));
+                drawLowPolyFacet(ctx, [proj[2], proj[1], proj[5], proj[6]], { x: 0.98, y: 0.2, z: 0 }, scaleColor(baseColor, 0.75));
+            };
 
-                // Orange sparks / flame shapes on the sides
-                ctx.fillStyle = '#e67e22';
-                const flameSway = Math.sin(Date.now() / 100) * 4;
-                ctx.beginPath();
-                // Left flame
-                ctx.moveTo(this.x - 20, this.y + 16 + bob);
-                ctx.lineTo(this.x - 26 + flameSway, this.y - 4 + bob);
-                ctx.lineTo(this.x - 22, this.y + 2 + bob);
-                ctx.closePath();
-                // Right flame
-                ctx.moveTo(this.x + 20, this.y + 16 + bob);
-                ctx.lineTo(this.x + 26 - flameSway, this.y - 4 + bob);
-                ctx.lineTo(this.x + 22, this.y + 2 + bob);
-                ctx.closePath();
-                ctx.fill();
+            // Draw three pillars
+            drawBox(-16, 6, 12, 44, 10, '#2c3e50'); // Left Column
+            drawBox(16, 6, 12, 44, 10, '#2c3e50');  // Right Column
+            drawBox(0, -2, 16, 56, 14, '#1e272e');  // Center Column (tallest server)
 
-                ctx.restore();
+            // Warning LED core on center server front panel
+            const blink = Math.floor(Date.now() / 250) % 2 === 0;
+            ctx.fillStyle = blink ? 'rgba(235, 59, 90, 0.85)' : '#4b1420';
+            ctx.strokeStyle = '#eb3b5a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.rect(this.x - 6, this.y - 8 + bob, 12, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = blink ? '#ffffff' : '#eb3b5a';
+            ctx.font = 'bold 5px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('OUTAGE', this.x, this.y - 2 + bob);
+
+            // Flashing mini LED beads on side racks
+            for (let i = 0; i < 4; i++) {
+                const ly = this.y - 18 + i * 8 + bob;
+                ctx.fillStyle = (i % 2 === 0 ? blink : !blink) ? '#eb3b5a' : '#4b1420';
+                ctx.fillRect(this.x - 13, ly, 2, 2);
+                ctx.fillStyle = (i % 2 !== 0 ? blink : !blink) ? '#f1c40f' : '#7f6a00';
+                ctx.fillRect(this.x + 11, ly, 2, 2);
+            }
+
+            // Low-poly triangular smoke sparks venting from sides
+            if (Math.random() < 0.15) {
+                game.particles.push({
+                    type: 'smoke',
+                    x: this.x + (Math.random() - 0.5) * 32,
+                    y: this.y - 22 + bob,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: -22 - Math.random() * 20,
+                    color: Math.random() < 0.5 ? '#eb3b5a' : '#ff7675',
+                    size: 3 + Math.random() * 4,
+                    life: 0.8,
+                    maxLife: 0.8,
+                    rot: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 5
+                });
             }
         }
 
@@ -1324,11 +1447,14 @@ class Tower {
     draw(ctx) {
         ctx.save();
 
-        // Draw drop shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-        ctx.beginPath();
-        ctx.ellipse(this.x, this.y + 12, 14, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw drop shadow (projected low-poly shadow)
+        const shadowPts = [
+            { x: this.x - 20, y: this.y },
+            { x: this.x, y: this.y - 10 },
+            { x: this.x + 20, y: this.y },
+            { x: this.x, y: this.y + 10 }
+        ];
+        drawProjectedShadow(ctx, shadowPts, 12);
 
         // Draw range circle if selected
         if (game.selectedPlacedTower === this) {
@@ -1342,7 +1468,7 @@ class Tower {
             
             ctx.strokeStyle = '#00f0ff';
             ctx.lineWidth = 1.5;
-            ctx.strokeRect(this.x - 20, this.y - 20, 40, 40);
+            ctx.strokeRect(this.x - 22, this.y - 22, 44, 44);
         }
 
         // Draw level stars
@@ -1351,19 +1477,20 @@ class Tower {
         ctx.textAlign = 'center';
         let stars = '';
         for (let i = 0; i < this.level; i++) stars += '★';
-        ctx.fillText(stars, this.x, this.y - 20);
+        ctx.fillText(stars, this.x, this.y - 22);
 
         // If frozen / disabled by Shaman's spell
         if (this.buggedTimer > 0) {
-            ctx.fillStyle = 'rgba(52, 152, 219, 0.45)'; // Ice blue
+            // Frozen low-poly crystal case
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.45)';
             ctx.strokeStyle = '#00f0ff';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(this.x - 14, this.y + 12);
-            ctx.lineTo(this.x - 16, this.y - 12);
-            ctx.lineTo(this.x, this.y - 18);
-            ctx.lineTo(this.x + 16, this.y - 12);
-            ctx.lineTo(this.x + 14, this.y + 12);
+            ctx.moveTo(this.x - 18, this.y + 14);
+            ctx.lineTo(this.x - 20, this.y - 14);
+            ctx.lineTo(this.x, this.y - 22);
+            ctx.lineTo(this.x + 20, this.y - 14);
+            ctx.lineTo(this.x + 18, this.y + 14);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
@@ -1377,362 +1504,466 @@ class Tower {
         // Bobbing breathing animation
         const bob = Math.sin(Date.now() / 200 + this.x) * 1.0;
 
-        if (false && spritesLoaded) {
-            const cols = 8;
-            const rows = 12;
-            const cellW = jrpgSprites.width / cols;
-            const cellH = jrpgSprites.height / rows;
+        // Helper for face normal in 3D (to support backface culling & correct shading)
+        const getNormal = (A, B, C) => {
+            const ux = B.x - A.x, uy = B.y - A.y, uz = B.z - A.z;
+            const vx = C.x - A.x, vy = C.y - A.y, vz = C.z - A.z;
+            const nx = uy * vz - uz * vy;
+            const ny = uz * vx - ux * vz;
+            const len = Math.hypot(nx, ny) || 1;
+            return { x: nx / len, y: ny / len, z: nz / len }; // nz is close to 0.7-1.0
+        };
 
-            let rowIdx = 0; // Archer row
-            if (this.type === 'mouse') rowIdx = 1;     // Ice Mage row
-            else if (this.type === 'laptop') rowIdx = 2; // Catapult row
-            else if (this.type === 'iphone') rowIdx = 3; // Druid row
-            else if (this.type === 'headset') rowIdx = 4;// Bard row
-            else if (this.type === 'coffee') rowIdx = 5; // Fairy row
-            else if (this.type === 'snack') rowIdx = 6;  // Fence row
+        if (this.type === 'keyboard') {
+            // Mechanical Keyboard: 3D Trapezoidal prism chassis with glowing keys
+            ctx.save();
+            // Base Underglow
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = ['#ff007f', '#00ecc6', '#39ff14', '#ffff00'][Math.floor(Date.now() / 300) % 4];
+            
+            // Top face of base
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 18, y: this.y - 8 + bob },
+                { x: this.x + 18, y: this.y - 8 + bob },
+                { x: this.x + 20, y: this.y + 6 + bob },
+                { x: this.x - 20, y: this.y + 6 + bob }
+            ], { x: 0, y: 0.2, z: 0.98 }, '#2f3542');
 
-            const frame = Math.floor(Date.now() / 200) % 4; // 4 idle frames
-            ctx.drawImage(
-                jrpgSprites, 
-                frame * cellW, rowIdx * cellH, cellW, cellH, 
-                this.x - 16, this.y - 18 + bob, 32, 32
-            );
-        } else {
-            if (this.type === 'keyboard') {
-                // Mechanical Keyboard: rounded dark grey chassis with glowing keycaps
-                ctx.save();
-                ctx.fillStyle = '#2f3542'; // keyboard body
-                ctx.strokeStyle = '#57606f';
-                ctx.lineWidth = 1.8;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 16, this.y - 8 + bob, 32, 18, 2.5);
-                ctx.fill();
-                ctx.stroke();
+            // Turn off glow for front/sides
+            ctx.shadowBlur = 0;
 
-                // Add RGB backglow!
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = ['#ff007f', '#00ecc6', '#39ff14', '#ffff00'][Math.floor(Date.now() / 300) % 4];
-                ctx.strokeStyle = ctx.shadowColor;
-                ctx.stroke();
+            // Front face of base
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 20, y: this.y + 6 + bob },
+                { x: this.x + 20, y: this.y + 6 + bob },
+                { x: this.x + 22, y: this.y + 12 + bob },
+                { x: this.x - 22, y: this.y + 12 + bob }
+            ], { x: 0, y: 0.8, z: 0.6 }, '#1c1f26');
 
-                // Draw miniature keycaps (grid of dots or small blocks)
-                const keyColors = ['#00f0ff', '#ff8fa3', '#ffffff', '#2ecc71', '#e5c290'];
-                ctx.lineWidth = 0.8;
-                ctx.shadowBlur = 0; // turn off shadow for tiny caps
-                for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
-                    for (let colIdx = 0; colIdx < 5; colIdx++) {
-                        const kx = this.x - 12 + colIdx * 5.5;
-                        const ky = this.y - 5 + rowIdx * 4.5 + bob;
-                        
-                        // Select color based on layout
-                        ctx.fillStyle = keyColors[(rowIdx + colIdx) % keyColors.length];
-                        ctx.fillRect(kx, ky, 3.5, 3);
-                    }
-                }
-                
-                // USB cord winding out
-                ctx.strokeStyle = '#747d8c';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y - 8 + bob);
-                ctx.quadraticCurveTo(this.x + 4, this.y - 13 + bob, this.x - 2, this.y - 17 + bob);
-                ctx.stroke();
-                ctx.restore();
-            } 
-            else if (this.type === 'mouse') {
-                // Computer Mouse: ergonomic gaming mouse with laser underglow & scroll wheel
-                ctx.save();
-                // Faint red laser underglow shadow
-                ctx.fillStyle = 'rgba(255, 118, 117, 0.22)';
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y + 4 + bob, 11, 14, 0, 0, Math.PI * 2);
-                ctx.fill();
+            // Left bevel face of base
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 18, y: this.y - 8 + bob },
+                { x: this.x - 20, y: this.y + 6 + bob },
+                { x: this.x - 22, y: this.y + 12 + bob },
+                { x: this.x - 18, y: this.y + 12 + bob }
+            ], { x: -0.9, y: 0.3, z: 0.3 }, '#222831');
 
-                // Mouse shell
-                ctx.fillStyle = '#1e272e'; // dark chassis
-                ctx.strokeStyle = '#2f3542';
-                ctx.lineWidth = 1.8;
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y - 1 + bob, 8, 12, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+            // Right bevel face of base
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 18, y: this.y - 8 + bob },
+                { x: this.x + 20, y: this.y + 6 + bob },
+                { x: this.x + 22, y: this.y + 12 + bob },
+                { x: this.x + 18, y: this.y + 12 + bob }
+            ], { x: 0.9, y: 0.3, z: 0.3 }, '#222831');
 
-                // Add gaming neon glow!
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = '#39ff14'; // neon green glow
-                ctx.strokeStyle = '#39ff14';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-
-                // Split click lines
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = '#57606f';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y - 13 + bob);
-                ctx.lineTo(this.x, this.y - 3 + bob);
-                ctx.moveTo(this.x - 8, this.y - 3 + bob);
-                ctx.lineTo(this.x + 8, this.y - 3 + bob);
-                ctx.stroke();
-
-                // Scroll wheel (glowing red scroll line)
-                ctx.fillStyle = '#ff7675';
-                ctx.fillRect(this.x - 1, this.y - 10 + bob, 2, 4);
-
-                // USB cable
-                ctx.strokeStyle = '#747d8c';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y - 13 + bob);
-                ctx.quadraticCurveTo(this.x - 3, this.y - 18 + bob, this.x + 2, this.y - 21 + bob);
-                ctx.stroke();
-                ctx.restore();
-            } 
-            else if (this.type === 'laptop') {
-                // IDE Server: a stack of rackmount server boxes with glowing LEDs and micro-screen
-                ctx.save();
-                // Chassis block
-                ctx.fillStyle = '#3f4b5b'; // steel grey case
-                ctx.strokeStyle = '#1c242f';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 15, this.y - 12 + bob, 30, 24, 2);
-                ctx.fill();
-                ctx.stroke();
-
-                // Separator line (double servers)
-                ctx.strokeStyle = '#1c242f';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(this.x - 15, this.y + bob);
-                ctx.lineTo(this.x + 15, this.y + bob);
-                ctx.stroke();
-
-                // Flashing status lights (LEDs) with glowing shadow!
-                const blink = Math.floor(Date.now() / 300) % 2 === 0;
-                ctx.shadowBlur = 6;
-                ctx.shadowColor = blink ? '#2ecc71' : '#e74c3c';
-                ctx.fillStyle = blink ? '#2ecc71' : '#27ae60'; // green LED
-                ctx.fillRect(this.x - 11, this.y - 8 + bob, 2.5, 2.5);
-                ctx.fillStyle = !blink ? '#e74c3c' : '#c0392b'; // red LED
-                ctx.fillRect(this.x - 11, this.y + 4 + bob, 2.5, 2.5);
-                ctx.shadowBlur = 0;
-
-                // Hard drive slot slots
-                ctx.fillStyle = '#1e272e';
-                ctx.fillRect(this.x - 6, this.y - 8 + bob, 4, 3);
-                ctx.fillRect(this.x - 6, this.y + 4 + bob, 4, 3);
-
-                // Mini glowing console screen showing code lines
-                ctx.fillStyle = '#1e272e'; // screen frame
-                ctx.fillRect(this.x + 1, this.y - 8 + bob, 11, 18);
-                ctx.strokeStyle = '#57606f';
-                ctx.strokeRect(this.x + 1, this.y - 8 + bob, 11, 18);
-
-                // Matrix green code mock lines with slight green glow
-                ctx.shadowBlur = 4;
-                ctx.shadowColor = '#00ecc6';
-                ctx.fillStyle = '#00ecc6';
-                ctx.fillRect(this.x + 3, this.y - 5 + bob, 7, 1);
-                ctx.fillRect(this.x + 3, this.y - 2 + bob, 5, 1);
-                ctx.fillRect(this.x + 3, this.y + 1 + bob, 8, 1);
-                ctx.fillRect(this.x + 3, this.y + 4 + bob, 6, 1);
-
-                ctx.restore();
-            }
-            else if (this.type === 'iphone') {
-                // Jenkins CI status rack with flashing stages
-                ctx.save();
-                ctx.fillStyle = '#4a5768'; // dark blue steel
-                ctx.strokeStyle = '#1e272e';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 12, this.y - 15 + bob, 24, 30, 2);
-                ctx.fill();
-                ctx.stroke();
-
-                // Top label text 'CI'
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 6px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('JENKINS', this.x, this.y - 8 + bob);
-
-                // Blinking build stage circles (Red, Orange, Green) with glows!
-                const pulse = Math.abs(Math.sin(Date.now() / 250)) * 0.4 + 0.6;
-                ctx.shadowBlur = 5;
-                
-                // Top circle: Blue/Green (success)
-                ctx.shadowColor = '#2ecc71';
-                ctx.fillStyle = `rgba(46, 204, 113, ${pulse})`;
-                ctx.beginPath();
-                ctx.arc(this.x - 6, this.y + 2 + bob, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = '#2f3542';
-                ctx.stroke();
-
-                // Middle circle: Orange (building)
-                const orangePulse = Math.floor(Date.now() / 200) % 2 === 0 ? 1.0 : 0.4;
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = '#f1c405';
-                ctx.fillStyle = `rgba(241, 196, 15, ${orangePulse})`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y + 2 + bob, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.stroke();
-
-                // Bottom circle: Red (failed build)
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = '#ff7675';
-                ctx.fillStyle = '#ff7675';
-                ctx.beginPath();
-                ctx.arc(this.x + 6, this.y + 2 + bob, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.stroke();
-
-                // Pipeline link lines
-                ctx.strokeStyle = '#7f8c8d';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(this.x - 12, this.y + 9 + bob);
-                ctx.lineTo(this.x + 12, this.y + 9 + bob);
-                ctx.stroke();
-
-                // build progress bar
-                ctx.fillStyle = '#1e272e';
-                ctx.fillRect(this.x - 8, this.y + 11 + bob, 16, 2);
-                ctx.fillStyle = '#2ecc71'; // progress percent
-                ctx.fillRect(this.x - 8, this.y + 11 + bob, 6 + Math.abs(Math.sin(Date.now() / 600)) * 10, 2);
-
-                ctx.restore();
-            }
-            else if (this.type === 'headset') {
-                // AI Assistant: futuristic holographic AI sound wave terminal
-                ctx.save();
-                // Base structure
-                ctx.fillStyle = '#7f8c8d'; // Silver metal pedestal
-                ctx.strokeStyle = '#2c3e50';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 10, this.y + 4 + bob, 20, 8, 1);
-                ctx.fill();
-                ctx.stroke();
-
-                // Floating hologram orb aura
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = '#00f0ff';
-                const pulse = Math.abs(Math.sin(Date.now() / 300)) * 8 + 10;
-                const auraGrad = ctx.createRadialGradient(this.x, this.y - 6 + bob, 1, this.x, this.y - 6 + bob, pulse);
-                auraGrad.addColorStop(0, 'rgba(0, 240, 255, 0.55)');
-                auraGrad.addColorStop(0.5, 'rgba(0, 240, 255, 0.20)');
-                auraGrad.addColorStop(1, 'rgba(0, 240, 255, 0)');
-                ctx.fillStyle = auraGrad;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 6 + bob, pulse, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Center holographic orb core
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#00ecc6';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 6 + bob, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-
-                // Sinusoidal AI voice indicator line
-                ctx.strokeStyle = '#00ecc6';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(this.x - 8, this.y - 6 + bob);
-                for (let i = -8; i <= 8; i += 2) {
-                    const waveY = Math.sin(Date.now() / 80 + i) * 3;
-                    ctx.lineTo(this.x + i, this.y - 6 + waveY + bob);
-                }
-                ctx.stroke();
-
-                ctx.restore();
-            }
-            else if (this.type === 'coffee') {
-                // Postgres DB: cylinder disk platters database unit with cyan LED channels
-                ctx.save();
-                const dbW = 20;
-                const dbH = 6;
-                
-                // Draw 3 stacked database cylinders
-                ctx.strokeStyle = '#1b3a4b';
-                ctx.lineWidth = 1.5;
-
-                // Stacked database cylinders with neon glow
-                ctx.shadowBlur = 6;
-                ctx.shadowColor = '#0a9396';
-                for (let i = 0; i < 3; i++) {
-                    const cyy = this.y - 10 + i * 8 + bob;
-                    ctx.fillStyle = '#0a9396'; // PostgreSQL blue
-                    ctx.beginPath();
-                    ctx.roundRect(this.x - dbW / 2, cyy, dbW, dbH, 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Cylinder metallic highlight plate
-                    ctx.fillStyle = '#94d2bd';
-                    ctx.fillRect(this.x - dbW / 2 + 3, cyy + 1, dbW - 6, 1.5);
+            // Keycaps grid (mini low-poly blocks)
+            const keyColors = ['#00f0ff', '#ff8fa3', '#ffffff', '#2ecc71', '#e5c290'];
+            for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
+                for (let colIdx = 0; colIdx < 5; colIdx++) {
+                    const kx = this.x - 14 + colIdx * 7;
+                    const ky = this.y - 5 + rowIdx * 5 + bob;
                     
-                    // Small glowing query LEDs (flashing green/cyan)
-                    const pulse = Math.floor(Date.now() / 200 + i) % 3 === 0;
-                    ctx.fillStyle = pulse ? '#00f0ff' : '#005f73';
-                    ctx.fillRect(this.x + 3, cyy + 3, 2, 2);
+                    // Draw a mini beveled block for each keycap
+                    const kColor = keyColors[(rowIdx + colIdx) % keyColors.length];
+                    ctx.fillStyle = kColor;
+                    ctx.fillRect(kx, ky, 5, 3.5);
+                    ctx.fillStyle = scaleColor(kColor, 0.7);
+                    ctx.fillRect(kx, ky + 3.5, 5, 1.5);
                 }
-
-                // Styled blue database query connector cables on side
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = '#94d2bd';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(this.x - dbW / 2 - 2, this.y - 10 + bob);
-                ctx.lineTo(this.x - dbW / 2 - 2, this.y + 8 + bob);
-                ctx.stroke();
-
-                ctx.restore();
             }
-            else if (this.type === 'snack') {
-                // Snack roadblock trap: Crumpled bag of chips and empty coke cans barricade
-                ctx.save();
-                
-                // Red Soda Can
-                ctx.fillStyle = '#ff7675'; // Can red
-                ctx.strokeStyle = '#2f3542';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.roundRect(this.x - 12, this.y + 2, 8, 12, 1);
-                ctx.fill();
-                ctx.stroke();
-                // Soda top tab
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(this.x - 10, this.y, 4, 2);
 
-                // Crumpled Potato Chips Bag (Yellow/Orange)
-                ctx.fillStyle = '#ffeaa7'; // chip bag yellow
-                ctx.strokeStyle = '#d89b00';
-                ctx.lineWidth = 1.2;
+            // USB cord winding out
+            ctx.strokeStyle = '#747d8c';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - 8 + bob);
+            ctx.quadraticCurveTo(this.x + 6, this.y - 14 + bob, this.x - 3, this.y - 19 + bob);
+            ctx.stroke();
+            ctx.restore();
+        } 
+        else if (this.type === 'mouse') {
+            // Gaming Mouse: Stealth-fighter-like multi-faceted 3D mesh
+            ctx.save();
+            const pts3d = [
+                { x: 0, y: -16, z: 0 },   // 0: front tip
+                { x: -12, y: 4, z: 0 },   // 1: left wing
+                { x: 12, y: 4, z: 0 },    // 2: right wing
+                { x: 0, y: 16, z: 0 },    // 3: back tip
+                { x: 0, y: -6, z: 7 },    // 4: spine front
+                { x: 0, y: 0, z: 11 },    // 5: spine top
+                { x: 0, y: 10, z: 7 }     // 6: spine back
+            ];
+
+            const rotX = 0.12;
+            const rotY = -0.15;
+
+            // Project coordinates centered at (x, y+bob)
+            const proj = pts3d.map(v => project3D(v.x, v.y, v.z, rotX, rotY, 0, this.x, this.y + bob));
+
+            // Face shading mapping
+            const faces = [
+                { pts: [0, 1, 4], norm: { x: -0.7, y: -0.5, z: 0.5 } },
+                { pts: [0, 4, 2], norm: { x: 0.7, y: -0.5, z: 0.5 } },
+                { pts: [4, 1, 5], norm: { x: -0.8, y: 0.0, z: 0.6 } },
+                { pts: [4, 5, 2], norm: { x: 0.8, y: 0.0, z: 0.6 } },
+                { pts: [5, 1, 6], norm: { x: -0.6, y: 0.5, z: 0.62 } },
+                { pts: [5, 6, 2], norm: { x: 0.6, y: 0.5, z: 0.62 } },
+                { pts: [6, 1, 3], norm: { x: -0.4, y: 0.8, z: 0.45 } },
+                { pts: [6, 3, 2], norm: { x: 0.4, y: 0.8, z: 0.45 } }
+            ];
+
+            faces.forEach(f => {
+                const drawPts = f.pts.map(idx => proj[idx]);
+                drawLowPolyFacet(ctx, drawPts, f.norm, '#1e272e');
+            });
+
+            // Glowing neon green laser lines (mouse scroll wheel & edges)
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#39ff14';
+            ctx.strokeStyle = '#39ff14';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(proj[0].x, proj[0].y);
+            ctx.lineTo(proj[4].x, proj[4].y);
+            ctx.lineTo(proj[5].x, proj[5].y);
+            ctx.lineTo(proj[6].x, proj[6].y);
+            ctx.lineTo(proj[3].x, proj[3].y);
+            ctx.stroke();
+
+            // Glowing scroll wheel
+            ctx.fillStyle = '#ff7675';
+            ctx.fillRect(proj[4].x - 1, proj[4].y, 2, 4);
+
+            ctx.restore();
+        } 
+        else if (this.type === 'laptop') {
+            // IDE Server: Dual stacked perspective server units
+            ctx.save();
+
+            const drawServerUnit = (cy, w, h, baseColor) => {
+                const w2 = w / 2, h2 = h / 2;
+                // Draw beveled top
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - w2, y: cy - h2 + bob },
+                    { x: this.x + w2, y: cy - h2 + bob },
+                    { x: this.x + w2 + 2, y: cy - h2 + 4 + bob },
+                    { x: this.x - w2 - 2, y: cy - h2 + 4 + bob }
+                ], { x: 0, y: -0.5, z: 0.86 }, baseColor);
+
+                // Draw front face
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - w2 - 2, y: cy - h2 + 4 + bob },
+                    { x: this.x + w2 + 2, y: cy - h2 + 4 + bob },
+                    { x: this.x + w2 + 2, y: cy + h2 + bob },
+                    { x: this.x - w2 - 2, y: cy + h2 + bob }
+                ], { x: 0, y: 0.8, z: 0.6 }, scaleColor(baseColor, 0.8));
+            };
+
+            // Stack 2 server cabinets
+            drawServerUnit(6, 36, 12, '#3f4b5b');  // Bottom server unit
+            drawServerUnit(-6, 36, 12, '#3f4b5b'); // Top server unit
+
+            // Blinking LEDs
+            const blink = Math.floor(Date.now() / 300) % 2 === 0;
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = blink ? '#2ecc71' : '#e74c3c';
+            
+            // LED points (diamonds)
+            const drawLed = (cx, cy, color) => {
+                ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.moveTo(this.x + 2, this.y - 10);
-                ctx.lineTo(this.x + 14, this.y - 7);
-                ctx.lineTo(this.x + 16, this.y + 10);
-                ctx.lineTo(this.x, this.y + 12);
+                ctx.moveTo(cx, cy - 2);
+                ctx.lineTo(cx + 2, cy);
+                ctx.lineTo(cx, cy + 2);
+                ctx.lineTo(cx - 2, cy);
                 ctx.closePath();
                 ctx.fill();
-                ctx.stroke();
-                
-                // Bag flavor text
-                ctx.fillStyle = '#e67e22';
-                ctx.font = '5px Arial';
-                ctx.fillText('CHIPS', this.x + 3, this.y + 3);
+            };
+            drawLed(this.x - 14, this.y - 4 + bob, blink ? '#2ecc71' : '#27ae60');
+            drawLed(this.x - 14, this.y + 8 + bob, !blink ? '#e74c3c' : '#c0392b');
+            ctx.shadowBlur = 0;
 
-                ctx.restore();
-            }
+            // HDD slot blocks
+            ctx.fillStyle = '#1e272e';
+            ctx.fillRect(this.x - 9, this.y - 5 + bob, 5, 3);
+            ctx.fillRect(this.x - 9, this.y + 7 + bob, 5, 3);
+
+            // Miniature terminal screen showing code lines
+            ctx.fillStyle = '#1e272e';
+            ctx.fillRect(this.x + 2, this.y - 7 + bob, 14, 20);
+            ctx.strokeStyle = '#57606f';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(this.x + 2, this.y - 7 + bob, 14, 20);
+
+            // Matrix green lines code mock
+            ctx.fillStyle = '#00ecc6';
+            ctx.fillRect(this.x + 4, this.y - 4 + bob, 10, 1.5);
+            ctx.fillRect(this.x + 4, this.y - 1 + bob, 7, 1.5);
+            ctx.fillRect(this.x + 4, this.y + 2 + bob, 11, 1.5);
+            ctx.fillRect(this.x + 4, this.y + 5 + bob, 8, 1.5);
+
+            ctx.restore();
+        } 
+        else if (this.type === 'iphone') {
+            // Jenkins CI: cabinet rack with spinning build stage bulbs (octahedrons)
+            ctx.save();
+            // Cabinet Frame (rectangular prism base)
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 14, y: this.y - 18 + bob },
+                { x: this.x + 14, y: this.y - 18 + bob },
+                { x: this.x + 16, y: this.y - 14 + bob },
+                { x: this.x - 16, y: this.y - 14 + bob }
+            ], { x: 0, y: -0.5, z: 0.86 }, '#4a5768');
+
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 16, y: this.y - 14 + bob },
+                { x: this.x + 16, y: this.y - 14 + bob },
+                { x: this.x + 16, y: this.y + 16 + bob },
+                { x: this.x - 16, y: this.y + 16 + bob }
+            ], { x: 0, y: 0.8, z: 0.6 }, '#343f4c');
+
+            // Side panels
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 14, y: this.y - 18 + bob },
+                { x: this.x - 16, y: this.y - 14 + bob },
+                { x: this.x - 16, y: this.y + 16 + bob },
+                { x: this.x - 14, y: this.y + 12 + bob }
+            ], { x: -0.98, y: 0.2, z: 0 }, '#1e242d');
+
+            // Render 3 mini rotating 3D octahedrons for build stages
+            const R = 4.5;
+            const pts3d = [
+                { x: 0, y: -R, z: 0 },
+                { x: 0, y: R, z: 0 },
+                { x: -R, y: 0, z: -R },
+                { x: R, y: 0, z: -R },
+                { x: R, y: 0, z: R },
+                { x: -R, y: 0, z: R }
+            ];
+
+            const rotX = 0.2;
+            const rotY = Date.now() / 200; // spin around Y axis
+
+            const faces = [
+                [0, 5, 4], [0, 4, 3], [0, 3, 2], [0, 2, 5],
+                [1, 4, 5], [1, 3, 4], [1, 2, 3], [1, 5, 2]
+            ];
+
+            const drawStageBulb = (cy, color) => {
+                const rotated = pts3d.map(v => {
+                    let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                    let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                    let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                    let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                    return { x: x1, y: y2, z: z2 };
+                });
+
+                const proj = rotated.map(r => {
+                    const dist = 120;
+                    const scale = 1.0 / (1.0 + r.z / dist);
+                    return { x: this.x + r.x * scale, y: cy + bob + r.y * scale };
+                });
+
+                faces.forEach(f => {
+                    const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
+                    if (norm.z > 0) {
+                        drawLowPolyFacet(ctx, [proj[f[0]], proj[f[1]], proj[f[2]]], norm, color);
+                    }
+                });
+            };
+
+            const pulse = Math.abs(Math.sin(Date.now() / 250)) * 0.3 + 0.7;
+            drawStageBulb(this.y - 6, `rgba(46, 204, 113, ${pulse})`); // Top stage (Green success)
+            drawStageBulb(this.y + 2, `rgba(241, 196, 15, ${pulse})`); // Mid stage (Yellow processing)
+            drawStageBulb(this.y + 10, '#ff7675');                    // Bottom stage (Red failed)
+
+            ctx.restore();
+        } 
+        else if (this.type === 'headset') {
+            // AI Assistant: Floating rotating Y-axis 3D crystalline head mesh (icosahedron)
+            ctx.save();
+
+            // Pedestal (trapezoidal silver base)
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 14, y: this.y + 10 + bob },
+                { x: this.x + 14, y: this.y + 10 + bob },
+                { x: this.x + 10, y: this.y + 6 + bob },
+                { x: this.x - 10, y: this.y + 6 + bob }
+            ], { x: 0, y: -0.5, z: 0.86 }, '#7f8c8d');
+
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 14, y: this.y + 10 + bob },
+                { x: this.x + 14, y: this.y + 10 + bob },
+                { x: this.x + 16, y: this.y + 16 + bob },
+                { x: this.x - 16, y: this.y + 16 + bob }
+            ], { x: 0, y: 0.8, z: 0.6 }, '#5a6268');
+
+            // Floating Hologram Orb (3D Icosahedron)
+            const R = 15;
+            const phi = (1 + Math.sqrt(5)) / 2;
+            const a = R / Math.sqrt(1 + phi * phi);
+            const b = phi * a;
+
+            const vertices = [
+                { x: -a, y: b, z: 0 }, { x: a, y: b, z: 0 }, { x: -a, y: -b, z: 0 }, { x: a, y: -b, z: 0 },
+                { x: 0, y: -a, z: b }, { x: 0, y: a, z: b }, { x: 0, y: -a, z: -b }, { x: 0, y: a, z: -b },
+                { x: b, y: 0, z: -a }, { x: b, y: 0, z: a }, { x: -b, y: 0, z: -a }, { x: -b, y: 0, z: a }
+            ];
+
+            const faces = [
+                [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+                [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+                [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+                [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+            ];
+
+            // Rotation angles
+            const rotX = Date.now() / 450;
+            const rotY = Date.now() / 250;
+
+            // Rotate coordinates
+            const rotated = vertices.map(v => {
+                let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                return { x: x1, y: y2, z: z2 };
+            });
+
+            // Project rotated coordinates to 2D
+            const proj = rotated.map(r => {
+                const dist = 120;
+                const scale = 1.0 / (1.0 + r.z / dist);
+                return { x: this.x + r.x * scale, y: this.y - 6 + bob + r.y * scale };
+            });
+
+            // Render faces of hologram (semi-transparent fills, cyan outlines)
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00f0ff';
+            
+            faces.forEach(f => {
+                const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
+                if (norm.z > 0) {
+                    ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+                    ctx.strokeStyle = '#00f0ff';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(proj[f[0]].x, proj[f[0]].y);
+                    ctx.lineTo(proj[f[1]].x, proj[f[1]].y);
+                    ctx.lineTo(proj[f[2]].x, proj[f[2]].y);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            });
+
+            // Vertices glowing indicator circles
+            ctx.fillStyle = '#ffffff';
+            proj.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+        } 
+        else if (this.type === 'coffee') {
+            // Postgres DB: 3 Stacked database hexagonal cylinder units
+            ctx.save();
+            
+            const dbW = 32;
+            const dbH = 7;
+            const R_hex = 15;
+
+            const drawHexPrism = (cy, color) => {
+                const topPts = [];
+                const botPts = [];
+                // Calculate hexagonal vertices
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3;
+                    const rx = Math.cos(angle) * R_hex;
+                    const rz = Math.sin(angle) * R_hex * 0.45; // slightly flattened perspective
+                    topPts.push({ x: this.x + rx, y: cy - dbH / 2 + rz + bob });
+                    botPts.push({ x: this.x + rx, y: cy + dbH / 2 + rz + bob });
+                }
+
+                // Draw top hexagon panel
+                drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, color);
+
+                // Draw 6 side panels
+                for (let i = 0; i < 6; i++) {
+                    const next = (i + 1) % 6;
+                    const panelColor = scaleColor(color, 0.8 - (i % 3) * 0.1);
+                    drawLowPolyFacet(ctx, [
+                        topPts[i], topPts[next], botPts[next], botPts[i]
+                    ], { x: 0, y: 0.8, z: 0.6 }, panelColor);
+                }
+            };
+
+            // Stack 3 hexagonal prisms
+            drawHexPrism(this.y + 10, '#0a9396'); // Bottom disk
+            drawHexPrism(this.y + 2, '#0a9396');  // Mid disk
+            drawHexPrism(this.y - 6, '#0a9396');  // Top disk
+
+            // Flashing LEDs on front panels
+            const pulse = Math.floor(Date.now() / 250) % 3 === 0;
+            ctx.fillStyle = pulse ? '#00f0ff' : '#005f73';
+            ctx.fillRect(this.x - 2, this.y - 4 + bob, 3, 3);
+            ctx.fillStyle = !pulse ? '#00f0ff' : '#005f73';
+            ctx.fillRect(this.x - 2, this.y + 4 + bob, 3, 3);
+
+            ctx.restore();
+        } 
+        else if (this.type === 'snack') {
+            // Snack roadblock: Folded origami potato chips bag and empty red soda can
+            ctx.save();
+
+            // Low-poly Soda Can (Red Pentagonal Prism)
+            const drawSodaCan = (cx, cy) => {
+                const R = 5;
+                const topPts = [];
+                const botPts = [];
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5;
+                    const rx = Math.cos(angle) * R;
+                    const rz = Math.sin(angle) * R * 0.5;
+                    topPts.push({ x: cx + rx, y: cy - 6 + rz });
+                    botPts.push({ x: cx + rx, y: cy + 6 + rz });
+                }
+                // Top cap
+                drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, '#bdc3c7');
+                // Sides
+                for (let i = 0; i < 5; i++) {
+                    const next = (i + 1) % 5;
+                    drawLowPolyFacet(ctx, [
+                        topPts[i], topPts[next], botPts[next], botPts[i]
+                    ], { x: 0, y: 0.8, z: 0.6 }, '#e74c3c');
+                }
+            };
+            drawSodaCan(this.x - 12, this.y + 2);
+
+            // Folded Origami Chip Bag (Yellow wedge)
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 2, y: this.y + 12 },
+                { x: this.x + 16, y: this.y + 10 },
+                { x: this.x + 14, y: this.y - 7 },
+                { x: this.x + 2, y: this.y - 10 }
+            ], { x: 0, y: 0.2, z: 0.98 }, '#ffeaa7');
+
+            // Beveled folded bottom flap
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 2, y: this.y + 12 },
+                { x: this.x + 16, y: this.y + 10 },
+                { x: this.x + 12, y: this.y + 16 },
+                { x: this.x + 0, y: this.y + 18 }
+            ], { x: 0, y: 0.8, z: 0.6 }, '#ffe066');
+
+            // Flavor text tag
+            ctx.fillStyle = '#e67e22';
+            ctx.font = 'bold 5px Arial';
+            ctx.fillText('CHIPS', this.x + 5, this.y + 2);
+
+            ctx.restore();
         }
 
         ctx.restore();
@@ -1881,74 +2112,102 @@ class Projectile {
             ctx.stroke();
         }
         else if (this.type === 'code_key') {
-            // Typewriter keycap containing the key characters (Ctrl, C, ;, etc.)
+            // Retro Typewriter Keycap Prism: 30% larger beveled low-poly block
             ctx.translate(this.x, this.y);
-            // We don't rotate keycaps to keep the letters upright and legible!
-            
-            // Keycap outer body (retro keyboard keycap)
-            ctx.fillStyle = '#2f3542'; // dark carbon keycap base
-            ctx.strokeStyle = '#1c1f26';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.roundRect(-12, -10, 24, 18, 2);
-            ctx.fill();
-            ctx.stroke();
+
+            // Keycap outer bottom/riser (dark border)
+            drawLowPolyFacet(ctx, [
+                { x: -14, y: 7 },
+                { x: 14, y: 7 },
+                { x: 16, y: 12 },
+                { x: -16, y: 12 }
+            ], { x: 0, y: 0.8, z: 0.6 }, '#1c1f26');
+
+            // Keycap top face
+            drawLowPolyFacet(ctx, [
+                { x: -14, y: -10 },
+                { x: 14, y: -10 },
+                { x: 12, y: 7 },
+                { x: -12, y: 7 }
+            ], { x: 0, y: 0.2, z: 0.98 }, '#2f3542');
 
             // Keycap face insert
-            ctx.fillStyle = '#57606f'; // lighter face
+            ctx.fillStyle = '#57606f';
             ctx.beginPath();
-            ctx.roundRect(-10, -9, 20, 14, 1.5);
+            ctx.roundRect(-10, -8, 20, 12, 1.5);
             ctx.fill();
 
-            // Key text (C, V, Ctrl, ;, etc.)
-            ctx.fillStyle = '#00ecc6'; // neon code cyan text
-            ctx.font = 'bold 8px "Press Start 2P", Courier, monospace';
+            // Key text (C, V, Ctrl, ;, etc.) - glow cyan
+            ctx.fillStyle = '#00ecc6';
+            ctx.font = 'bold 9px "Press Start 2P", Courier, monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
-            // Draw slightly smaller font for long keys like 'Ctrl', 'Shift'
             const keyText = this.text || ';';
             if (keyText.length > 2) {
-                ctx.font = 'bold 6px Arial, Helvetica, sans-serif';
+                ctx.font = 'bold 7px Arial, Helvetica, sans-serif';
             }
             ctx.fillText(keyText, 0, -1);
         } 
         else if (this.type === 'compile_bomb') {
-            // Compilation Crash Bubble: Spinning red warning orb with 'ERR' or '!'
-            const spinAngle = (game.time / 100) % (Math.PI * 2);
-            ctx.translate(this.x, this.y);
-            ctx.rotate(spinAngle);
-            
-            // Outer warning ring
-            ctx.strokeStyle = '#ff7675';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.arc(0, 0, 11, 0, Math.PI * 2);
-            ctx.stroke();
+            // Compilation Crash Bomb: Rotating 3D wireframe icosahedron
+            const rotX = (Date.now() / 200) % (Math.PI * 2);
+            const rotY = (Date.now() / 150) % (Math.PI * 2);
 
-            // Glowing red inner bubble
-            ctx.fillStyle = 'rgba(235, 59, 90, 0.85)';
-            ctx.strokeStyle = '#ff7675';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(0, 0, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            const R = 14;
+            const phi = (1 + Math.sqrt(5)) / 2;
+            const a = R / Math.sqrt(1 + phi * phi);
+            const b = phi * a;
 
-            // Draw a yellow exclamation mark (!) in the center
-            ctx.save();
-            ctx.rotate(-spinAngle); // counteract spin so ! stays upright
-            ctx.fillStyle = '#ffd32a'; // yellow exclamation
-            ctx.font = 'bold 11px Arial';
+            const vertices = [
+                { x: -a, y: b, z: 0 }, { x: a, y: b, z: 0 }, { x: -a, y: -b, z: 0 }, { x: a, y: -b, z: 0 },
+                { x: 0, y: -a, z: b }, { x: 0, y: a, z: b }, { x: 0, y: -a, z: -b }, { x: 0, y: a, z: -b },
+                { x: b, y: 0, z: -a }, { x: b, y: 0, z: a }, { x: -b, y: 0, z: -a }, { x: -b, y: 0, z: a }
+            ];
+
+            const faces = [
+                [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+                [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+                [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+                [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+            ];
+
+            // Project 3D vertices relative to center
+            const proj = vertices.map(v => project3D(v.x, v.y, v.z, rotX, rotY, 0, this.x, this.y));
+
+            // Helper for 3D face normal
+            const getNormal = (A, B, C) => {
+                const ux = B.x - A.x, uy = B.y - A.y, uz = B.z - A.z;
+                const vx = C.x - A.x, vy = C.y - A.y, vz = C.z - A.z;
+                const nx = uy * vz - uz * vy;
+                const ny = uz * vx - ux * vz;
+                const len = Math.hypot(nx, ny) || 1;
+                return { x: nx / len, y: ny / len, z: nz / len };
+            };
+
+            // Draw crystal faces
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#ff7675';
+            faces.forEach(f => {
+                ctx.fillStyle = 'rgba(235, 59, 90, 0.08)';
+                ctx.strokeStyle = '#ff7675';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(proj[f[0]].x, proj[f[0]].y);
+                ctx.lineTo(proj[f[1]].x, proj[f[1]].y);
+                ctx.lineTo(proj[f[2]].x, proj[f[2]].y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            });
+            ctx.shadowBlur = 0;
+
+            // Draw yellow exclamation warning symbol (!) upright in center
+            ctx.fillStyle = '#ffd32a';
+            ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('!', 0, 0);
-            ctx.restore();
-            
-            // Flashing data sparks
-            ctx.fillStyle = '#ffeaa7';
-            ctx.fillRect(Math.sin(spinAngle) * 12 - 1, Math.cos(spinAngle) * 12 - 1, 2, 2);
-            ctx.fillRect(-Math.sin(spinAngle) * 12 - 1, -Math.cos(spinAngle) * 12 - 1, 2, 2);
+            ctx.fillText('!', this.x, this.y);
         }
 
         ctx.restore();
@@ -2800,34 +3059,34 @@ const game = {
     getWaveConfig(waveNum) {
         const list = [];
         if (waveNum === 1) {
-            // Wave 1: 25 spec_adder (dense and fast)
-            for (let i = 0; i < 25; i++) list.push({ type: 'spec_adder', delay: 1000 + i * 400 });
+            // Wave 1: 30 spec_adder (dense and fast)
+            for (let i = 0; i < 30; i++) list.push({ type: 'spec_adder', delay: 600 + i * 250 });
         } 
         else if (waveNum === 2) {
-            // Wave 2: 18 spec_adder + 15 doc_bombers
-            for (let i = 0; i < 18; i++) list.push({ type: 'spec_adder', delay: 1000 + i * 400 });
-            for (let i = 0; i < 15; i++) list.push({ type: 'doc_bomber', delay: 2000 + i * 600 });
+            // Wave 2: 22 spec_adder + 18 doc_bombers
+            for (let i = 0; i < 22; i++) list.push({ type: 'spec_adder', delay: 500 + i * 250 });
+            for (let i = 0; i < 18; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 400 });
         } 
         else if (waveNum === 3) {
-            // Wave 3: 20 spec_adder + 20 urgent + 12 qa_buggers
-            for (let i = 0; i < 20; i++) list.push({ type: 'spec_adder', delay: 500 + i * 350 });
-            for (let i = 0; i < 20; i++) list.push({ type: 'urgent', delay: 1200 + i * 400 });
-            for (let i = 0; i < 12; i++) list.push({ type: 'qa_bugger', delay: 1500 + i * 500 });
+            // Wave 3: 25 spec_adder + 25 urgent + 16 qa_buggers
+            for (let i = 0; i < 25; i++) list.push({ type: 'spec_adder', delay: 400 + i * 200 });
+            for (let i = 0; i < 25; i++) list.push({ type: 'urgent', delay: 800 + i * 250 });
+            for (let i = 0; i < 16; i++) list.push({ type: 'qa_bugger', delay: 1000 + i * 300 });
         } 
         else if (waveNum === 4) {
-            // Wave 4: 18 doc_bombers + 20 qa_buggers + 20 urgent
-            for (let i = 0; i < 18; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 500 });
-            for (let i = 0; i < 20; i++) list.push({ type: 'qa_bugger', delay: 1200 + i * 600 });
-            for (let i = 0; i < 20; i++) list.push({ type: 'urgent', delay: 1500 + i * 450 });
+            // Wave 4: 22 doc_bombers + 24 qa_buggers + 24 urgent
+            for (let i = 0; i < 22; i++) list.push({ type: 'doc_bomber', delay: 600 + i * 350 });
+            for (let i = 0; i < 24; i++) list.push({ type: 'qa_bugger', delay: 800 + i * 300 });
+            for (let i = 0; i < 24; i++) list.push({ type: 'urgent', delay: 1000 + i * 250 });
         } 
         else if (waveNum === 5) {
-            // Wave 5: 22 doc_bombers + 22 qa_buggers + 22 urgent + 3 Outage Bosses!
-            for (let i = 0; i < 22; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 500 });
-            for (let i = 0; i < 22; i++) list.push({ type: 'qa_bugger', delay: 1200 + i * 500 });
-            for (let i = 0; i < 22; i++) list.push({ type: 'urgent', delay: 1500 + i * 400 });
-            list.push({ type: 'ceo_boss', delay: 8000 });
-            list.push({ type: 'ceo_boss', delay: 14000 });
-            list.push({ type: 'ceo_boss', delay: 20000 });
+            // Wave 5: 30 doc_bombers + 30 qa_buggers + 30 urgent + 3 Outage Bosses!
+            for (let i = 0; i < 30; i++) list.push({ type: 'doc_bomber', delay: 500 + i * 300 });
+            for (let i = 0; i < 30; i++) list.push({ type: 'qa_bugger', delay: 600 + i * 250 });
+            for (let i = 0; i < 30; i++) list.push({ type: 'urgent', delay: 800 + i * 200 });
+            list.push({ type: 'ceo_boss', delay: 5000 });
+            list.push({ type: 'ceo_boss', delay: 10000 });
+            list.push({ type: 'ceo_boss', delay: 15000 });
         }
         return list;
     },
@@ -3488,9 +3747,27 @@ const game = {
                 this.ctx.globalAlpha = 1.0;
             }
             else {
+                // Spinning flat-shaded low-poly triangles
+                const size = Math.max(1.5, p.size * (p.life / p.maxLife));
+                const rot = (p.rot || 0) + (p.rotSpeed || 5) * (1 - p.life / p.maxLife);
+                
+                this.ctx.save();
+                this.ctx.translate(p.x, p.y);
+                this.ctx.rotate(rot);
+                
                 this.ctx.fillStyle = p.color;
-                const size = Math.max(1, p.size * (p.life / p.maxLife));
-                this.ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -size);
+                this.ctx.lineTo(size * 0.86, size * 0.5);
+                this.ctx.lineTo(-size * 0.86, size * 0.5);
+                this.ctx.closePath();
+                this.ctx.fill();
+
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                this.ctx.lineWidth = 0.5;
+                this.ctx.stroke();
+
+                this.ctx.restore();
             }
         });
         this.ctx.restore();
@@ -3612,9 +3889,11 @@ const game = {
                 vx: Math.cos(angle) * velocity,
                 vy: Math.sin(angle) * velocity,
                 color: color,
-                size: 2 + Math.random() * 3,
+                size: (2 + Math.random() * 3) * 1.4, // scaled up by 40%
                 life: 0.4 + Math.random() * 0.3,
-                maxLife: 0.7
+                maxLife: 0.7,
+                rot: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 10
             });
         }
     },
