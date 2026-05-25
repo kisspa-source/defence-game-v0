@@ -989,3 +989,25 @@ body {
     50% { transform: translate(1px, -1px); text-shadow: -1px 1px 0 #ff00c1, 1px -1px 0 #00fff9; }
     100% { transform: translate(0, 0); text-shadow: 1px 1px 0 #ff00c1, -1px -1px 0 #00fff9; }
 }
+
+.caffeine-warning {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(231, 76, 60, 0.95);
+    border: 2px solid #ff7675;
+    color: #ffffff;
+    padding: 6px 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    border-radius: 4px;
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+    pointer-events: none;
+    animation: caffeine-blink 0.5s infinite alternate;
+}
+@keyframes caffeine-blink {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+}

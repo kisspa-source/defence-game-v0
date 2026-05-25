@@ -174,13 +174,13 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
     if (isWallRow) {
         let baseColor = '#9fc0a6';
         if (row === 0) {
-            baseColor = '#9fc0a6'; // Sage green
+            baseColor = '#9fc0a6'; // Sage green (Pantry & Breakroom wall)
         } else if (row === 3) {
-            baseColor = '#2c3e50'; // Dark Blue-Grey
+            baseColor = '#2c3e50'; // Dark Blue-Grey (QA & Meetings wall)
         } else if (row === 6) {
-            baseColor = '#f5f6fa'; // Clean White/Cream
+            baseColor = '#cbd5e0'; // Clean White/Cream (Dev Team Workspace wall)
         } else if (row === 9) {
-            baseColor = '#1e272e'; // Dim Midnight Blue
+            baseColor = '#1e272e'; // Dim Midnight Blue (Server Room wall)
         }
 
         // Draw low-poly wall block (split-bevel)
@@ -200,9 +200,9 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             {x: px, y: py + CELL_SIZE}
         ], {x: 0, y: 0.8, z: 0.6}, baseColor);
 
-        // Decorations on walls
+        // Wall decorations
         if (row === 0 && col === 5) {
-            // Octagon Wall Clock (instead of circle)
+            // Octagon Wall Clock
             const cx = px + 20, cy = py + 18;
             const r1 = 7, r2 = 5;
             const pointsOuter = [];
@@ -222,7 +222,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             ctx.stroke();
         }
         else if (row === 3) {
-            // Blinking LEDs (Octahedron status bulbs)
+            // Blinking LEDs
             const blink = Math.floor(Date.now() / 400) % 2 === 0;
             const drawLed = (cx, cy, color) => {
                 const pts = [
@@ -237,7 +237,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             drawLed(px + 23, py + 16, !blink ? '#e74c3c' : '#c0392b');
         }
         else if (row === 6 && col === 4) {
-            // Project WBS Chart Frame (Faceted blocks)
+            // Project WBS Chart Frame
             ctx.fillStyle = '#85583f';
             ctx.fillRect(px + 6, py + 6, 28, 20);
             ctx.fillStyle = '#ffffff';
@@ -256,7 +256,6 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             ctx.fillStyle = '#00ff66';
             ctx.fillText('>', px + 10, py + 20);
             if (showCursor) {
-                // Draw a 3D block style cursor
                 drawLowPolyFacet(ctx, [
                     {x: px + 22, y: py + 12},
                     {x: px + 28, y: py + 12},
@@ -266,15 +265,16 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             }
         }
     } else {
+        // Floor types based on partition zones
         let baseColor = '#ced6e0';
         if (row < 3) {
-            baseColor = '#f2ddc6'; // Floor 4: Wood light
+            baseColor = '#f2ddc6'; // Floor 4: Pantry & Breakroom (Wood light)
         } else if (row < 6) {
-            baseColor = '#57606f'; // Floor 3: Metal plates
+            baseColor = '#57606f'; // Floor 3: QA & Meetings (Metal plates)
         } else if (row < 9) {
-            baseColor = '#b77c57'; // Floor 2: Mahogany
+            baseColor = '#b77c57'; // Floor 2: Dev Workspace (Mahogany)
         } else {
-            baseColor = '#353b48'; // Floor 1: Dim grey
+            baseColor = '#353b48'; // Floor 1: Server Room (Dim grey)
         }
 
         // Triangulate each floor cell into 4 triangles
@@ -290,7 +290,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
         drawLowPolyFacet(ctx, [v3, v0, vc], {x: -0.35, y: 0, z: 0.936}, baseColor);
     }
 
-    // Platform bottom edge lip (3D depth) - beveled
+    // Platform bottom edge lip (3D depth)
     if (row === 2 || row === 5 || row === 8 || row === 11) {
         drawLowPolyFacet(ctx, [
             {x: px, y: py + CELL_SIZE - 6},
@@ -299,6 +299,41 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             {x: px, y: py + CELL_SIZE}
         ], {x: 0, y: 0.9, z: 0.43}, '#3c2517');
     }
+
+    // Draw Glass Wall & Partitions
+    ctx.save();
+    if (row >= 3 && row < 6) {
+        // Floor 3 Meeting Room boundary (Glass wall at col 8 left edge)
+        if (col === 8) {
+            ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+            ctx.fillRect(px - 1, py, 3, CELL_SIZE);
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(px, py); ctx.lineTo(px, py + CELL_SIZE);
+            ctx.stroke();
+        }
+    } else if (row >= 6 && row < 9) {
+        // Floor 2 Dev Team boundary partitions
+        if (col === 1) {
+            // vertical partition on right edge
+            drawLowPolyFacet(ctx, [
+                {x: px + CELL_SIZE - 2, y: py},
+                {x: px + CELL_SIZE + 2, y: py},
+                {x: px + CELL_SIZE + 2, y: py + CELL_SIZE},
+                {x: px + CELL_SIZE - 2, y: py + CELL_SIZE}
+            ], {x: -1, y: 0, z: 0.2}, '#52665d');
+        } else if (col === 8) {
+            // vertical partition on left edge
+            drawLowPolyFacet(ctx, [
+                {x: px - 2, y: py},
+                {x: px + 2, y: py},
+                {x: px + 2, y: py + CELL_SIZE},
+                {x: px - 2, y: py + CELL_SIZE}
+            ], {x: 1, y: 0, z: 0.2}, '#52665d');
+        }
+    }
+    ctx.restore();
 
     // Draw Props on unoccupied non-wall cells
     const isOccupied = (col === 1 && row === 1) || (col === 9 && row === 10) || isWallRow ||
@@ -309,116 +344,293 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
         ctx.save();
         
         if (row < 3) {
-            // Floor 4: IT Office Props (Stool, table, plant)
-            if ((col + row) % 3 === 0) {
-                // Round Pink Stool
-                ctx.fillStyle = '#ff8fa3';
-                ctx.beginPath();
-                ctx.ellipse(px + 20, py + 24, 10, 4, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#d63031';
-                ctx.lineWidth = 1.2;
-                ctx.stroke();
-                // Stool legs
-                ctx.strokeStyle = '#bdc3c7';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(px + 15, py + 24); ctx.lineTo(px + 15, py + 36);
-                ctx.moveTo(px + 25, py + 24); ctx.lineTo(px + 25, py + 36);
-                ctx.stroke();
-            } else if ((col + row) % 3 === 1) {
-                // Potted plant
-                ctx.fillStyle = '#a0522d'; // clay pot
-                ctx.fillRect(px + 14, py + 22, 12, 8);
-                ctx.fillStyle = '#2ecc71';
-                ctx.beginPath();
-                ctx.arc(px + 16, py + 16, 4, 0, Math.PI * 2);
-                ctx.arc(px + 24, py + 16, 4, 0, Math.PI * 2);
-                ctx.arc(px + 20, py + 12, 5, 0, Math.PI * 2);
-                ctx.fill();
+            // Floor 4: Pantry (Left) & Breakroom (Right)
+            if (col <= 2) {
+                // Pantry
+                if (row === 1 && col === 0) {
+                    // Coffee Machine
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 6, y: py + 20},
+                        {x: px + 34, y: py + 20},
+                        {x: px + 34, y: py + 38},
+                        {x: px + 6, y: py + 38}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#7f8c8d');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 8, y: py + 8},
+                        {x: px + 32, y: py + 8},
+                        {x: px + 32, y: py + 20},
+                        {x: px + 8, y: py + 20}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#2c3e50');
+                    ctx.fillStyle = '#ffffff'; // mug
+                    ctx.fillRect(px + 18, py + 16, 4, 4);
+                    ctx.fillStyle = '#5c3d2e'; // coffee outlet stream
+                    ctx.fillRect(px + 19, py + 11, 2, 5);
+                } else if (row === 1 && col === 1) {
+                    // Water Purifier (정수기)
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 10, y: py + 22},
+                        {x: px + 30, y: py + 22},
+                        {x: px + 30, y: py + 38},
+                        {x: px + 10, y: py + 38}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#dcdde1');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 10, y: py + 8},
+                        {x: px + 30, y: py + 8},
+                        {x: px + 30, y: py + 22},
+                        {x: px + 10, y: py + 22}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#f5f6fa');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 12, y: py + 2},
+                        {x: px + 28, y: py + 2},
+                        {x: px + 28, y: py + 8},
+                        {x: px + 12, y: py + 8}
+                    ], {x: 0, y: -0.5, z: 0.86}, '#74b9ff'); // Water bottle
+                    ctx.fillStyle = '#0084ff';
+                    ctx.fillRect(px + 16, py + 16, 2, 2);
+                    ctx.fillStyle = '#ff3838';
+                    ctx.fillRect(px + 22, py + 16, 2, 2);
+                } else if (row === 1 && col === 2) {
+                    // Snack cabinet / shelf
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 6, y: py + 6},
+                        {x: px + 34, y: py + 6},
+                        {x: px + 34, y: py + 38},
+                        {x: px + 6, y: py + 38}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#b58f70');
+                    ctx.fillStyle = '#e74c3c'; // red snacks
+                    ctx.fillRect(px + 10, py + 12, 6, 6);
+                    ctx.fillStyle = '#f1c40f'; // yellow boxes
+                    ctx.fillRect(px + 22, py + 10, 7, 8);
+                    ctx.fillStyle = '#2ecc71'; // green packet
+                    ctx.fillRect(px + 12, py + 24, 6, 6);
+                }
+            } else if (col >= 4) {
+                // Breakroom
+                if (row === 1 && col === 5) {
+                    // Sofa (Teal color)
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 2, y: py + 8},
+                        {x: px + 38, y: py + 8},
+                        {x: px + 38, y: py + 18},
+                        {x: px + 2, y: py + 18}
+                    ], {x: 0, y: -0.2, z: 0.98}, '#0e8a8a');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 2, y: py + 18},
+                        {x: px + 38, y: py + 18},
+                        {x: px + 38, y: py + 34},
+                        {x: px + 2, y: py + 34}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#1abc9c');
+                    drawLowPolyFacet(ctx, [
+                        {x: px, y: py + 12},
+                        {x: px + 4, y: py + 12},
+                        {x: px + 4, y: py + 34},
+                        {x: px, y: py + 34}
+                    ], {x: -0.8, y: 0.2, z: 0.6}, '#0e8a8a');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 36, y: py + 12},
+                        {x: px + 40, y: py + 12},
+                        {x: px + 40, y: py + 34},
+                        {x: px + 36, y: py + 34}
+                    ], {x: 0.8, y: 0.2, z: 0.6}, '#0e8a8a');
+                } else if (row === 1 && col === 8) {
+                    // Potted Plant
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 14, y: py + 22},
+                        {x: px + 26, y: py + 22},
+                        {x: px + 28, y: py + 36},
+                        {x: px + 12, y: py + 36}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#b58f70');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 10, y: py + 18},
+                        {x: px + 30, y: py + 18},
+                        {x: px + 20, y: py + 4}
+                    ], {x: 0, y: -0.3, z: 0.95}, '#27ae60');
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 14, y: py + 12},
+                        {x: px + 26, y: py + 12},
+                        {x: px + 20, y: py + 1}
+                    ], {x: 0.3, y: -0.3, z: 0.95}, '#2ecc71');
+                } else if (row === 1 && col === 6) {
+                    // Coffee table
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 8, y: py + 12},
+                        {x: px + 32, y: py + 12},
+                        {x: px + 32, y: py + 26},
+                        {x: px + 8, y: py + 26}
+                    ], {x: 0, y: -0.5, z: 0.86}, '#f5f6fa');
+                    ctx.fillStyle = '#ff7675';
+                    ctx.fillRect(px + 14, py + 15, 3, 4);
+                    ctx.fillStyle = '#3498db';
+                    ctx.fillRect(px + 22, py + 17, 3, 4);
+                }
             }
         }
         else if (row >= 3 && row < 6) {
-            // Floor 3: Server Room Props (Server Cabinets / Racks)
-            if ((col + row) % 3 === 0) {
-                // High density server cabinet
-                ctx.fillStyle = '#2f3542'; // steel case
-                ctx.strokeStyle = '#7f8c8d';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.roundRect(px + 6, py + 4, CELL_SIZE - 12, CELL_SIZE - 8, 2);
-                ctx.fill();
-                ctx.stroke();
-                // vertical slot details
-                ctx.fillStyle = '#1e272e';
-                ctx.fillRect(px + 10, py + 8, CELL_SIZE - 20, CELL_SIZE - 16);
-                // blinking led dot
-                const serverBlink = Math.floor(Date.now() / 250) % 2 === 0;
-                ctx.fillStyle = serverBlink ? '#00f0ff' : '#0984e3'; // blinking blue lights
-                ctx.fillRect(px + 14, py + 12, 2, 2);
-                ctx.fillRect(px + 14, py + 20, 2, 2);
-                ctx.fillStyle = '#2ecc71'; // status green
-                ctx.fillRect(px + 22, py + 12, 2, 2);
+            // Floor 3: QA Zone (Left) & Meeting Room (Right)
+            if (col <= 2) {
+                // QA Zone
+                if (row === 4 && col === 0) {
+                    // QA Desk
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 4, y: py + 14},
+                        {x: px + 36, y: py + 14},
+                        {x: px + 36, y: py + 30},
+                        {x: px + 4, y: py + 30}
+                    ], {x: 0, y: -0.5, z: 0.86}, '#bdc3c7');
+                    ctx.fillStyle = '#2c3e50'; // phone base
+                    ctx.fillRect(px + 15, py + 18, 5, 8);
+                    ctx.fillStyle = '#00ff66'; // test app screen
+                    ctx.fillRect(px + 16, py + 19, 3, 6);
+                } else if (row === 4 && col === 1) {
+                    // QA Bug Board
+                    ctx.strokeStyle = '#2f3542';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(px + 10, py + 34); ctx.lineTo(px + 20, py + 14);
+                    ctx.moveTo(px + 30, py + 34); ctx.lineTo(px + 20, py + 14);
+                    ctx.stroke();
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 4, y: py + 4},
+                        {x: px + 36, y: py + 4},
+                        {x: px + 36, y: py + 26},
+                        {x: px + 4, y: py + 26}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#ffffff');
+                    ctx.fillStyle = '#ff7675'; // bug report red chart
+                    ctx.fillRect(px + 8, py + 8, 16, 4);
+                    ctx.fillStyle = '#2ecc71'; // test green chart
+                    ctx.fillRect(px + 8, py + 14, 20, 4);
+                }
+            } else if (col >= 8) {
+                // Meeting Room
+                if (row === 4 && col === 9) {
+                    // Table and Chairs
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 2, y: py + 10},
+                        {x: px + 38, y: py + 10},
+                        {x: px + 38, y: py + 30},
+                        {x: px + 2, y: py + 30}
+                    ], {x: 0, y: -0.5, z: 0.86}, '#bdc3c7');
+                    const drawChair = (cx, cy) => {
+                        ctx.fillStyle = '#34495e';
+                        ctx.fillRect(cx, cy, 6, 6);
+                    };
+                    drawChair(px + 8, py + 3);
+                    drawChair(px + 26, py + 3);
+                    drawChair(px + 8, py + 31);
+                    drawChair(px + 26, py + 31);
+                } else if (row === 4 && col === 8) {
+                    // Whiteboard with Jira tasks
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 6, y: py + 4},
+                        {x: px + 34, y: py + 4},
+                        {x: px + 34, y: py + 28},
+                        {x: px + 6, y: py + 28}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#ffffff');
+                    ctx.strokeStyle = '#bdc3c7';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(px + 15, py + 6); ctx.lineTo(px + 15, py + 26);
+                    ctx.moveTo(px + 25, py + 6); ctx.lineTo(px + 25, py + 26);
+                    ctx.stroke();
+                    ctx.fillStyle = '#fffa5c'; // sticky notes
+                    ctx.fillRect(px + 9, py + 8, 4, 3);
+                    ctx.fillStyle = '#5cff88';
+                    ctx.fillRect(px + 27, py + 10, 4, 3);
+                    ctx.fillStyle = '#5c8dff';
+                    ctx.fillRect(px + 18, py + 14, 4, 3);
+                }
             }
         }
         else if (row >= 6 && row < 9) {
-            // Floor 2: Meeting Room Props (Chairs, Tables, Notes)
-            if ((col + row) % 3 === 1) {
-                // Long whiteboard table plank
-                ctx.fillStyle = '#85583f'; // table brown wood
-                ctx.strokeStyle = '#5c3a21';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.roundRect(px + 4, py + 14, CELL_SIZE - 8, 12, 1);
-                ctx.fill();
-                ctx.stroke();
-                
-                // Mug on table
-                ctx.fillStyle = '#ff8fa3';
-                ctx.fillRect(px + 18, py + 10, 4, 5);
+            // Floor 2: Dev Team Workspace
+            if (col <= 1 || col >= 8) {
+                // Table
+                drawLowPolyFacet(ctx, [
+                    {x: px + 2, y: py + 14},
+                    {x: px + 38, y: py + 14},
+                    {x: px + 38, y: py + 36},
+                    {x: px + 2, y: py + 36}
+                ], {x: 0, y: -0.5, z: 0.86}, '#3c2517');
+
+                if (col === 0 && row === 7) {
+                    // Workstation (Dual Monitors)
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 4, y: py + 2},
+                        {x: px + 18, y: py + 2},
+                        {x: px + 18, y: py + 12},
+                        {x: px + 4, y: py + 12}
+                    ], {x: -0.2, y: 0.8, z: 0.6}, '#2f3542');
+                    ctx.fillStyle = '#002b36'; // screen 1
+                    ctx.fillRect(px + 6, py + 4, 10, 6);
+                    
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 20, y: py + 2},
+                        {x: px + 34, y: py + 2},
+                        {x: px + 34, y: py + 12},
+                        {x: px + 20, y: py + 12}
+                    ], {x: 0.2, y: 0.8, z: 0.6}, '#2f3542');
+                    ctx.fillStyle = '#002b36'; // screen 2
+                    ctx.fillRect(px + 22, py + 4, 10, 6);
+                } else if (col === 1 && row === 7) {
+                    // Keyboard & Coffee Cup
+                    ctx.fillStyle = '#1c1f26'; // keyboard
+                    ctx.fillRect(px + 10, py + 22, 14, 6);
+                    ctx.fillStyle = '#00ffcc'; // rgb keys
+                    ctx.fillRect(px + 14, py + 24, 6, 2);
+                    ctx.fillStyle = '#f5f6fa'; // coffee mug
+                    ctx.fillRect(px + 28, py + 20, 4, 5);
+                } else if (col === 9 && row === 7) {
+                    // Wide monitor
+                    drawLowPolyFacet(ctx, [
+                        {x: px + 6, y: py + 3},
+                        {x: px + 34, y: py + 3},
+                        {x: px + 34, y: py + 13},
+                        {x: px + 6, y: py + 13}
+                    ], {x: 0, y: 0.8, z: 0.6}, '#1e272e');
+                    ctx.fillStyle = '#00ff66'; // IDE coding screen glow
+                    ctx.fillRect(px + 8, py + 5, 24, 6);
+                } else if (col === 10 && row === 7) {
+                    // Soda cans / papers
+                    ctx.fillStyle = '#ffffff'; // papers
+                    ctx.fillRect(px + 10, py + 20, 10, 8);
+                    ctx.strokeStyle = '#bdc3c7';
+                    ctx.strokeRect(px + 10, py + 20, 10, 8);
+                    ctx.fillStyle = '#e74c3c'; // soda
+                    ctx.fillRect(px + 26, py + 22, 3, 6);
+                }
             }
         }
         else if (row >= 9) {
-            // Floor 1: Night Overtime Dev Team Props (Pizza boxes, soda cans, coffee mugs, glowing monitor setups)
-            if ((col + row) % 3 === 0) {
-                // Glowing Monitor Workstation
-                ctx.fillStyle = '#2f3542'; // bezel
-                ctx.fillRect(px + 6, py + 10, 28, 18);
-                // screen glow
-                ctx.fillStyle = '#002b36'; // dark background
-                ctx.fillRect(px + 8, py + 12, 24, 14);
-                // terminal code graphics
-                ctx.fillStyle = '#2ecc71';
-                ctx.fillRect(px + 10, py + 15, 6, 2);
-                ctx.fillRect(px + 10, py + 18, 12, 2);
-                ctx.fillStyle = '#00f0ff';
-                ctx.fillRect(px + 10, py + 21, 8, 2);
-                // stand
-                ctx.fillStyle = '#7f8c8d';
-                ctx.fillRect(px + 18, py + 28, 4, 4);
-                ctx.fillRect(px + 12, py + 32, 16, 2);
-            } else if ((col + row) % 3 === 1) {
-                // Pizza Box (flattened cardboard square)
-                ctx.fillStyle = '#bdc3c7'; // white box
-                ctx.strokeStyle = '#c0392b'; // red pizza logo line
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.roundRect(px + 10, py + 18, 20, 16, 1);
-                ctx.fill();
-                ctx.stroke();
-                // details
-                ctx.fillStyle = '#d35400'; // tiny slice representation
-                ctx.fillRect(px + 18, py + 22, 4, 4);
-            } else {
-                // Empty Coffee cups and soda cans
-                ctx.fillStyle = '#e74c3c'; // soda can red
-                ctx.fillRect(px + 12, py + 24, 5, 8);
-                ctx.fillStyle = '#ffffff'; // coffee cup
-                ctx.fillRect(px + 24, py + 20, 6, 7);
-                // coffee steam (small wiggles)
-                const steamWiggle = Math.floor(Date.now() / 300) % 2;
-                ctx.fillStyle = 'rgba(255,255,255,0.45)';
-                ctx.fillRect(px + 26, py + 15 - steamWiggle, 1.5, 2.5);
+            // Floor 1: Server Room
+            if (col <= 2 || col >= 9 || row === 11) {
+                // Server Cabinets (Server Racks)
+                drawLowPolyFacet(ctx, [
+                    {x: px + 6, y: py + 2},
+                    {x: px + 34, y: py + 2},
+                    {x: px + 36, y: py + 6},
+                    {x: px + 4, y: py + 6}
+                ], {x: 0, y: -0.5, z: 0.86}, '#2f3542');
+
+                drawLowPolyFacet(ctx, [
+                    {x: px + 4, y: py + 6},
+                    {x: px + 36, y: py + 6},
+                    {x: px + 36, y: py + 38},
+                    {x: px + 4, y: py + 38}
+                ], {x: 0, y: 0.8, z: 0.6}, '#1e272e');
+
+                // Sliders and glowing LED status lights
+                ctx.fillStyle = '#11141a';
+                ctx.fillRect(px + 8, py + 10, 24, 4);
+                ctx.fillRect(px + 8, py + 18, 24, 4);
+                ctx.fillRect(px + 8, py + 26, 24, 4);
+
+                const blink = Math.floor(Date.now() / 300) % 2 === 0;
+                ctx.fillStyle = blink ? '#00f0ff' : '#0055ff'; // Blue
+                ctx.fillRect(px + 12, py + 11, 2, 2);
+                ctx.fillStyle = '#2ecc71'; // Green status
+                ctx.fillRect(px + 20, py + 19, 2, 2);
+                ctx.fillStyle = !blink ? '#e74c3c' : '#550000'; // Red alarm
+                ctx.fillRect(px + 28, py + 27, 2, 2);
             }
         }
         ctx.restore();
@@ -510,6 +722,281 @@ const TECH_POOL = [
         }
     }
 ];
+
+class NPC {
+    constructor(type, name, gx, gy) {
+        this.type = type; // 'dev', 'qa', 'pm', 'infra'
+        this.name = name;
+        this.gx = gx;
+        this.gy = gy;
+        this.x = gx * CELL_SIZE + CELL_SIZE / 2;
+        this.y = gy * CELL_SIZE + CELL_SIZE / 2;
+        
+        this.state = 'idle'; // 'idle', 'walking', 'typing', 'sleeping', 'resting'
+        this.targetState = 'idle';
+        this.speed = 45; // pixels per second
+        this.walkCycle = 0;
+        this.idleTimer = Math.random() * 5 + 3; // stay idle for 3-8s
+        
+        this.waypoints = [];
+        this.speechBubbleText = '';
+        this.speechBubbleTimer = 0;
+        this.bubbleInterval = Math.random() * 15 + 10; // speak every 10-25s
+        
+        // Desk coordinates to return to
+        this.homeGx = gx;
+        this.homeGy = gy;
+    }
+
+    setDestination(destGx, destGy, nextState) {
+        this.targetState = nextState;
+        this.waypoints = [];
+        
+        const startFloor = this.getFloor(this.gy);
+        const endFloor = this.getFloor(destGy);
+        
+        if (startFloor !== endFloor) {
+            let corrCol = this.getCorridorColForFloor(startFloor);
+            this.waypoints.push({x: corrCol * CELL_SIZE + CELL_SIZE/2, y: this.gy * CELL_SIZE + CELL_SIZE/2});
+            
+            let currentFloor = startFloor;
+            while (currentFloor !== endFloor) {
+                let nextFloor = currentFloor < endFloor ? currentFloor + 1 : currentFloor - 1;
+                let stairs = this.getStairsBetween(currentFloor, nextFloor);
+                
+                this.waypoints.push({x: stairs.col * CELL_SIZE + CELL_SIZE/2, y: stairs.startRow * CELL_SIZE + CELL_SIZE/2});
+                this.waypoints.push({x: stairs.col * CELL_SIZE + CELL_SIZE/2, y: stairs.endRow * CELL_SIZE + CELL_SIZE/2});
+                
+                currentFloor = nextFloor;
+            }
+            
+            let destCorrCol = this.getCorridorColForFloor(endFloor);
+            this.waypoints.push({x: destCorrCol * CELL_SIZE + CELL_SIZE/2, y: destGy * CELL_SIZE + CELL_SIZE/2});
+        }
+        
+        this.waypoints.push({x: destGx * CELL_SIZE + CELL_SIZE/2, y: destGy * CELL_SIZE + CELL_SIZE/2});
+        this.state = 'walking';
+    }
+
+    getFloor(row) {
+        if (row < 3) return 4;
+        if (row < 6) return 3;
+        if (row < 9) return 2;
+        return 1;
+    }
+
+    getCorridorColForFloor(floor) {
+        if (floor === 4) return 3;
+        if (floor === 3) return 5;
+        if (floor === 2) return 4;
+        return 6;
+    }
+
+    getStairsBetween(f1, f2) {
+        const lowF = Math.min(f1, f2);
+        if (lowF === 3) {
+            return { col: 3, startRow: 1, endRow: 4 };
+        } else if (lowF === 2) {
+            return { col: 7, startRow: 4, endRow: 7 };
+        } else {
+            return { col: 2, startRow: 7, endRow: 10 };
+        }
+    }
+
+    update(dt) {
+        this.bubbleInterval -= dt;
+        if (this.bubbleInterval <= 0) {
+            this.speakRandomly();
+            this.bubbleInterval = Math.random() * 20 + 15;
+        }
+
+        if (this.speechBubbleTimer > 0) {
+            this.speechBubbleTimer -= dt;
+        }
+
+        if (this.state === 'walking') {
+            if (this.waypoints.length === 0) {
+                this.state = this.targetState;
+                this.idleTimer = Math.random() * 6 + 4;
+                return;
+            }
+
+            const target = this.waypoints[0];
+            const dx = target.x - this.x;
+            const dy = target.y - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            this.walkCycle += dt * 8;
+
+            if (dist < 2) {
+                this.x = target.x;
+                this.y = target.y;
+                this.gx = Math.floor(this.x / CELL_SIZE);
+                this.gy = Math.floor(this.y / CELL_SIZE);
+                this.waypoints.shift();
+            } else {
+                this.x += (dx / dist) * this.speed * dt;
+                this.y += (dy / dist) * this.speed * dt;
+            }
+        } else {
+            this.idleTimer -= dt;
+            if (this.idleTimer <= 0) {
+                this.pickNextAction();
+            }
+        }
+    }
+
+    pickNextAction() {
+        if (this.type === 'dev') {
+            const rand = Math.random();
+            if (rand < 0.5) {
+                this.state = 'typing';
+                this.idleTimer = Math.random() * 8 + 6;
+            } else if (rand < 0.75) {
+                this.state = 'sleeping';
+                this.idleTimer = Math.random() * 5 + 3;
+            } else {
+                this.setDestination(1, 1, 'resting');
+                this.speechBubbleText = "아아 마시러 간다... ☕";
+                this.speechBubbleTimer = 2.5;
+            }
+        } else if (this.type === 'qa') {
+            const rand = Math.random();
+            if (rand < 0.6) {
+                this.state = 'typing';
+                this.idleTimer = Math.random() * 10 + 5;
+            } else {
+                this.setDestination(1, 7, 'resting');
+                this.speechBubbleText = "개발팀 자리로 버그 리포트 배달 갑니다~ 🏃";
+                this.speechBubbleTimer = 2.5;
+            }
+        } else if (this.type === 'pm') {
+            const rand = Math.random();
+            if (rand < 0.6) {
+                this.state = 'idle';
+                this.idleTimer = Math.random() * 6 + 4;
+            } else {
+                this.setDestination(9, 7, 'resting');
+                this.speechBubbleText = "개발팀 진척률 점검하러 출동! 📋";
+                this.speechBubbleTimer = 2.5;
+            }
+        } else if (this.type === 'infra') {
+            const rand = Math.random();
+            if (rand < 0.6) {
+                this.state = 'idle';
+                this.idleTimer = Math.random() * 8 + 4;
+            } else {
+                const targetCol = Math.random() < 0.5 ? 1 : 9;
+                this.setDestination(targetCol, 11, 'idle');
+            }
+        }
+
+        if (this.state === 'resting' && this.gx !== this.homeGx && this.gy !== this.homeGy) {
+            this.setDestination(this.homeGx, this.homeGy, this.type === 'dev' ? 'typing' : 'idle');
+        }
+    }
+
+    speakRandomly() {
+        const phrases = {
+            dev: ["아아... 커피 수혈 시급...", "빌드 에러 왜 나지?", "퇴근하고 싶다...", "이걸 왜 이렇게 짰지?", "Works on my machine", "주말에 서버 안 터지겠지?"],
+            qa: ["이거 버그인데요?", "재현 경로 스크린샷 보냄", "단위테스트 다 깨져요", "QA 재오픈합니다"],
+            pm: ["이거 오늘 중으로 되나요?", "회의 들어오세요", "Jira 티켓 할당했습니다", "일정이 너무 촉박해요"],
+            infra: ["서버 온도 정상", "트래픽이 급증합니다!", "DB 락 풀렸나?", "인프라 점검 완료"]
+        };
+        const list = phrases[this.type];
+        this.speechBubbleText = list[Math.floor(Math.random() * list.length)];
+        this.speechBubbleTimer = 3.0;
+    }
+
+    draw(ctx) {
+        ctx.save();
+
+        const bob = Math.sin(Date.now() / 150 + this.x) * 1.2;
+        const legSway = this.state === 'walking' ? Math.sin(this.walkCycle) * 3 : 0;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + 12 + bob, 8, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        let bodyColor = '#3498db';
+        if (this.type === 'dev') bodyColor = '#00ecc6';
+        if (this.type === 'qa') bodyColor = '#a55eea';
+        if (this.type === 'pm') bodyColor = '#fa8231';
+        if (this.type === 'infra') bodyColor = '#7f8c8d';
+
+        drawLowPolyFacet(ctx, [
+            { x: this.x - 5, y: this.y + 12 + bob },
+            { x: this.x + 5, y: this.y + 12 + bob },
+            { x: this.x + 4, y: this.y + bob },
+            { x: this.x - 4, y: this.y + bob }
+        ], { x: 0, y: 0.8, z: 0.6 }, bodyColor);
+
+        ctx.fillStyle = '#ffdfba';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 4 + bob, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = this.type === 'pm' ? '#2f3542' : '#8c5225';
+        ctx.beginPath();
+        ctx.moveTo(this.x - 5, this.y - 5 + bob);
+        ctx.lineTo(this.x + 5, this.y - 5 + bob);
+        ctx.lineTo(this.x + 3, this.y - 9 + bob);
+        ctx.lineTo(this.x - 3, this.y - 9 + bob);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#2f3542';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x - 2, this.y + 12 + bob);
+        ctx.lineTo(this.x - 2 - legSway, this.y + 17 + bob);
+        ctx.moveTo(this.x + 2, this.y + 12 + bob);
+        ctx.lineTo(this.x + 2 + legSway, this.y + 17 + bob);
+        ctx.stroke();
+
+        if (this.state === 'typing') {
+            ctx.strokeStyle = '#ffdfba';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(this.x - 4, this.y + 4 + bob);
+            ctx.lineTo(this.x - 6 + Math.sin(Date.now()/50)*2, this.y + 2 + bob);
+            ctx.moveTo(this.x + 4, this.y + 4 + bob);
+            ctx.lineTo(this.x + 6 + Math.cos(Date.now()/50)*2, this.y + 2 + bob);
+            ctx.stroke();
+        }
+
+        if (this.state === 'sleeping') {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 7px Arial';
+            ctx.fillText('💤', this.x + 8, this.y - 8 + bob);
+        }
+
+        if (this.speechBubbleText && this.speechBubbleTimer > 0) {
+            ctx.font = '7px Arial';
+            const textWidth = ctx.measureText(this.speechBubbleText).width;
+            const bw = textWidth + 8;
+            const bh = 12;
+            const bx = this.x - bw / 2;
+            const by = this.y - 16 + bob;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#2f3542';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(bx, by - bh, bw, bh, 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#1e272e';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.speechBubbleText, this.x, by - bh / 2);
+        }
+
+        ctx.restore();
+    }
+}
 
 // Classes definition
 class Enemy {
@@ -1380,6 +1867,45 @@ class Tower {
         }
     }
 
+    getName() {
+        if (this.type === 'keyboard') {
+            if (this.level >= 5) return '초와이드 개발 스테이션';
+            if (this.level >= 3) return '듀얼 모니터 기계식 키보드';
+            return '기계식 키보드';
+        }
+        if (this.type === 'mouse') {
+            if (this.level >= 5) return '인체공학 버티컬 마우스';
+            if (this.level >= 3) return 'VPN 감속 마우스';
+            return '게이밍 마우스';
+        }
+        if (this.type === 'laptop') {
+            if (this.level >= 5) return 'AI GPU 서버 클러스터';
+            if (this.level >= 3) return 'Kubernetes 컨테이너';
+            return 'IDE 서버';
+        }
+        if (this.type === 'iphone') {
+            if (this.level >= 5) return 'ELK 로그 추적 시스템';
+            if (this.level >= 3) return 'Jenkins 파이프라인';
+            return 'Jenkins CI';
+        }
+        if (this.type === 'headset') {
+            if (this.level >= 5) return 'Grafana 대시보드';
+            if (this.level >= 3) return 'Prometheus 메트릭';
+            return 'AI Assistant';
+        }
+        if (this.type === 'coffee') {
+            if (this.level >= 5) return '분산 데이터베이스';
+            if (this.level >= 3) return 'Redis Cache 버퍼';
+            return 'PostgreSQL 서버';
+        }
+        if (this.type === 'snack') {
+            if (this.level >= 5) return '무제한 간식 냉장고';
+            if (this.level >= 3) return '탕비실 간식바구니';
+            return '간식 박스';
+        }
+        return this.name;
+    }
+
     getUpgradeCost() {
         const discount = 1 - game.buffs.costDiscount;
         return Math.round((this.baseCost * 0.8 * this.level) * discount);
@@ -1420,7 +1946,7 @@ class Tower {
             game.updateHUD();
             Sound.playUpgrade();
             game.createFloatingText('LEVEL UP!', this.x, this.y - 20, '#ffcc00');
-            game.log(`[SYSTEM] ${this.name} 타워 Level ${this.level}로 업그레이드!`);
+            game.log(`[SYSTEM] ${this.getName()} 타워 Level ${this.level}로 업그레이드!`);
             
             // Refresh selection panel details
             game.selectPlacedTower(this);
@@ -1679,7 +2205,6 @@ class Tower {
 
         // If frozen / disabled by Shaman's spell
         if (this.buggedTimer > 0) {
-            // Frozen low-poly crystal case
             ctx.fillStyle = 'rgba(52, 152, 219, 0.45)';
             ctx.strokeStyle = '#00f0ff';
             ctx.lineWidth = 2;
@@ -1699,78 +2224,119 @@ class Tower {
             return;
         }
 
-        // Bobbing breathing animation
         const bob = Math.sin(Date.now() / 200 + this.x) * 1.0;
 
-        // Helper for face normal in 3D (to support backface culling & correct shading)
         const getNormal = (A, B, C) => {
             const ux = B.x - A.x, uy = B.y - A.y, uz = B.z - A.z;
             const vx = C.x - A.x, vy = C.y - A.y, vz = C.z - A.z;
             const nx = uy * vz - uz * vy;
             const ny = uz * vx - ux * vz;
             const len = Math.hypot(nx, ny) || 1;
-            return { x: nx / len, y: ny / len, z: nz / len }; // nz is close to 0.7-1.0
+            return { x: nx / len, y: ny / len, z: nz / len };
         };
 
         if (this.type === 'keyboard') {
-            // Mechanical Keyboard: 3D Trapezoidal prism chassis with glowing keys
             ctx.save();
-            // Base Underglow
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = ['#ff007f', '#00ecc6', '#39ff14', '#ffff00'][Math.floor(Date.now() / 300) % 4];
-            
-            // Top face of base
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 18, y: this.y - 8 + bob },
-                { x: this.x + 18, y: this.y - 8 + bob },
-                { x: this.x + 20, y: this.y + 6 + bob },
-                { x: this.x - 20, y: this.y + 6 + bob }
-            ], { x: 0, y: 0.2, z: 0.98 }, '#2f3542');
-
-            // Turn off glow for front/sides
-            ctx.shadowBlur = 0;
-
-            // Front face of base
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 20, y: this.y + 6 + bob },
-                { x: this.x + 20, y: this.y + 6 + bob },
-                { x: this.x + 22, y: this.y + 12 + bob },
-                { x: this.x - 22, y: this.y + 12 + bob }
-            ], { x: 0, y: 0.8, z: 0.6 }, '#1c1f26');
-
-            // Left bevel face of base
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 18, y: this.y - 8 + bob },
-                { x: this.x - 20, y: this.y + 6 + bob },
-                { x: this.x - 22, y: this.y + 12 + bob },
-                { x: this.x - 18, y: this.y + 12 + bob }
-            ], { x: -0.9, y: 0.3, z: 0.3 }, '#222831');
-
-            // Right bevel face of base
-            drawLowPolyFacet(ctx, [
-                { x: this.x + 18, y: this.y - 8 + bob },
-                { x: this.x + 20, y: this.y + 6 + bob },
-                { x: this.x + 22, y: this.y + 12 + bob },
-                { x: this.x + 18, y: this.y + 12 + bob }
-            ], { x: 0.9, y: 0.3, z: 0.3 }, '#222831');
-
-            // Keycaps grid (mini low-poly blocks)
-            const keyColors = ['#00f0ff', '#ff8fa3', '#ffffff', '#2ecc71', '#e5c290'];
-            for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
-                for (let colIdx = 0; colIdx < 5; colIdx++) {
-                    const kx = this.x - 14 + colIdx * 7;
-                    const ky = this.y - 5 + rowIdx * 5 + bob;
-                    
-                    // Draw a mini beveled block for each keycap
-                    const kColor = keyColors[(rowIdx + colIdx) % keyColors.length];
-                    ctx.fillStyle = kColor;
-                    ctx.fillRect(kx, ky, 5, 3.5);
-                    ctx.fillStyle = scaleColor(kColor, 0.7);
-                    ctx.fillRect(kx, ky + 3.5, 5, 1.5);
+            if (this.level >= 5) {
+                // 초와이드 개발 스테이션: Ultra-wide curved screen workstation
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 20, y: this.y + 6 + bob},
+                    {x: this.x + 20, y: this.y + 6 + bob},
+                    {x: this.x + 22, y: this.y + 14 + bob},
+                    {x: this.x - 22, y: this.y + 14 + bob}
+                ], {x: 0, y: 0.8, z: 0.6}, '#b58f70'); // wood table desk
+                
+                ctx.fillStyle = '#2f3542';
+                ctx.fillRect(this.x - 2, this.y + bob, 4, 8); // stand
+                
+                // Curved low-poly monitor wings
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 22, y: this.y - 12 + bob},
+                    {x: this.x - 8, y: this.y - 10 + bob},
+                    {x: this.x - 8, y: this.y + 2 + bob},
+                    {x: this.x - 22, y: this.y + 0 + bob}
+                ], {x: -0.5, y: 0.2, z: 0.86}, '#1c1f26');
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 8, y: this.y - 10 + bob},
+                    {x: this.x + 8, y: this.y - 10 + bob},
+                    {x: this.x + 8, y: this.y + 2 + bob},
+                    {x: this.x - 8, y: this.y + 2 + bob}
+                ], {x: 0, y: 0.2, z: 0.98}, '#2f3542');
+                drawLowPolyFacet(ctx, [
+                    {x: this.x + 8, y: this.y - 10 + bob},
+                    {x: this.x + 22, y: this.y - 12 + bob},
+                    {x: this.x + 22, y: this.y + 0 + bob},
+                    {x: this.x + 8, y: this.y + 2 + bob}
+                ], {x: 0.5, y: 0.2, z: 0.86}, '#1c1f26');
+                
+                ctx.fillStyle = '#00ffcc'; // Screen code lines glow
+                ctx.fillRect(this.x - 6, this.y - 7 + bob, 12, 6);
+            } else if (this.level >= 3) {
+                // 듀얼 모니터 기계식 키보드: Desk with dual screen monitors
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 18, y: this.y + 6 + bob},
+                    {x: this.x + 18, y: this.y + 6 + bob},
+                    {x: this.x + 20, y: this.y + 12 + bob},
+                    {x: this.x - 20, y: this.y + 12 + bob}
+                ], {x: 0, y: 0.8, z: 0.6}, '#85583f');
+                
+                ctx.fillStyle = '#2f3542';
+                ctx.fillRect(this.x - 1, this.y + bob, 2, 8); // Stand
+                
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 16, y: this.y - 10 + bob},
+                    {x: this.x - 1, y: this.y - 8 + bob},
+                    {x: this.x - 1, y: this.y + 2 + bob},
+                    {x: this.x - 16, y: this.y + 0 + bob}
+                ], {x: -0.3, y: 0.2, z: 0.95}, '#1c1f26'); // Screen 1
+                drawLowPolyFacet(ctx, [
+                    {x: this.x + 1, y: this.y - 8 + bob},
+                    {x: this.x + 16, y: this.y - 10 + bob},
+                    {x: this.x + 16, y: this.y + 0 + bob},
+                    {x: this.x + 1, y: this.y + 2 + bob}
+                ], {x: 0.3, y: 0.2, z: 0.95}, '#1c1f26'); // Screen 2
+            } else {
+                // Base mechanical keyboard
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = ['#ff007f', '#00ecc6', '#39ff14', '#ffff00'][Math.floor(Date.now() / 300) % 4];
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 18, y: this.y - 8 + bob },
+                    { x: this.x + 18, y: this.y - 8 + bob },
+                    { x: this.x + 20, y: this.y + 6 + bob },
+                    { x: this.x - 20, y: this.y + 6 + bob }
+                ], { x: 0, y: 0.2, z: 0.98 }, '#2f3542');
+                ctx.shadowBlur = 0;
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 20, y: this.y + 6 + bob },
+                    { x: this.x + 20, y: this.y + 6 + bob },
+                    { x: this.x + 22, y: this.y + 12 + bob },
+                    { x: this.x - 22, y: this.y + 12 + bob }
+                ], { x: 0, y: 0.8, z: 0.6 }, '#1c1f26');
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 18, y: this.y - 8 + bob },
+                    { x: this.x - 20, y: this.y + 6 + bob },
+                    { x: this.x - 22, y: this.y + 12 + bob },
+                    { x: this.x - 18, y: this.y + 12 + bob }
+                ], { x: -0.9, y: 0.3, z: 0.3 }, '#222831');
+                drawLowPolyFacet(ctx, [
+                    { x: this.x + 18, y: this.y - 8 + bob },
+                    { x: this.x + 20, y: this.y + 6 + bob },
+                    { x: this.x + 22, y: this.y + 12 + bob },
+                    { x: this.x + 18, y: this.y + 12 + bob }
+                ], { x: 0.9, y: 0.3, z: 0.3 }, '#222831');
+                const keyColors = ['#00f0ff', '#ff8fa3', '#ffffff', '#2ecc71', '#e5c290'];
+                for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
+                    for (let colIdx = 0; colIdx < 5; colIdx++) {
+                        const kx = this.x - 14 + colIdx * 7;
+                        const ky = this.y - 5 + rowIdx * 5 + bob;
+                        const kColor = keyColors[(rowIdx + colIdx) % keyColors.length];
+                        ctx.fillStyle = kColor;
+                        ctx.fillRect(kx, ky, 5, 3.5);
+                        ctx.fillStyle = scaleColor(kColor, 0.7);
+                        ctx.fillRect(kx, ky + 3.5, 5, 1.5);
+                    }
                 }
             }
-
-            // USB cord winding out
             ctx.strokeStyle = '#747d8c';
             ctx.lineWidth = 1.2;
             ctx.beginPath();
@@ -1780,387 +2346,519 @@ class Tower {
             ctx.restore();
         } 
         else if (this.type === 'mouse') {
-            // Gaming Mouse: Stealth-fighter-like multi-faceted 3D mesh
             ctx.save();
-            const pts3d = [
-                { x: 0, y: -16, z: 0 },   // 0: front tip
-                { x: -12, y: 4, z: 0 },   // 1: left wing
-                { x: 12, y: 4, z: 0 },    // 2: right wing
-                { x: 0, y: 16, z: 0 },    // 3: back tip
-                { x: 0, y: -6, z: 7 },    // 4: spine front
-                { x: 0, y: 0, z: 11 },    // 5: spine top
-                { x: 0, y: 10, z: 7 }     // 6: spine back
-            ];
-
-            const rotX = 0.12;
-            const rotY = -0.15;
-
-            // Project coordinates centered at (x, y+bob)
-            const proj = pts3d.map(v => project3D(v.x, v.y, v.z, rotX, rotY, 0, this.x, this.y + bob));
-
-            // Face shading mapping
-            const faces = [
-                { pts: [0, 1, 4], norm: { x: -0.7, y: -0.5, z: 0.5 } },
-                { pts: [0, 4, 2], norm: { x: 0.7, y: -0.5, z: 0.5 } },
-                { pts: [4, 1, 5], norm: { x: -0.8, y: 0.0, z: 0.6 } },
-                { pts: [4, 5, 2], norm: { x: 0.8, y: 0.0, z: 0.6 } },
-                { pts: [5, 1, 6], norm: { x: -0.6, y: 0.5, z: 0.62 } },
-                { pts: [5, 6, 2], norm: { x: 0.6, y: 0.5, z: 0.62 } },
-                { pts: [6, 1, 3], norm: { x: -0.4, y: 0.8, z: 0.45 } },
-                { pts: [6, 3, 2], norm: { x: 0.4, y: 0.8, z: 0.45 } }
-            ];
-
-            faces.forEach(f => {
-                const drawPts = f.pts.map(idx => proj[idx]);
-                drawLowPolyFacet(ctx, drawPts, f.norm, '#1e272e');
-            });
-
-            // Glowing neon green laser lines (mouse scroll wheel & edges)
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#39ff14';
-            ctx.strokeStyle = '#39ff14';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(proj[0].x, proj[0].y);
-            ctx.lineTo(proj[4].x, proj[4].y);
-            ctx.lineTo(proj[5].x, proj[5].y);
-            ctx.lineTo(proj[6].x, proj[6].y);
-            ctx.lineTo(proj[3].x, proj[3].y);
-            ctx.stroke();
-
-            // Glowing scroll wheel
-            ctx.fillStyle = '#ff7675';
-            ctx.fillRect(proj[4].x - 1, proj[4].y, 2, 4);
-
+            if (this.level >= 5) {
+                // 인체공학 버티컬 마우스: Slanted ergonomic high-profile prism
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 8, y: this.y - 14 + bob},
+                    {x: this.x + 6, y: this.y - 8 + bob},
+                    {x: this.x + 10, y: this.y + 12 + bob},
+                    {x: this.x - 10, y: this.y + 12 + bob}
+                ], {x: 0.4, y: 0.8, z: 0.4}, '#34495e');
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 8, y: this.y - 14 + bob},
+                    {x: this.x - 10, y: this.y + 12 + bob},
+                    {x: this.x - 12, y: this.y + 4 + bob}
+                ], {x: -0.9, y: 0.2, z: 0.3}, '#2c3e50');
+                ctx.fillStyle = '#ff7675'; // Glowing LED highlight strip
+                ctx.fillRect(this.x + 2, this.y - 4 + bob, 3, 8);
+            } else {
+                // Base Gaming Mouse
+                const pts3d = [
+                    { x: 0, y: -16, z: 0 }, { x: -12, y: 4, z: 0 }, { x: 12, y: 4, z: 0 }, { x: 0, y: 16, z: 0 },
+                    { x: 0, y: -6, z: 7 }, { x: 0, y: 0, z: 11 }, { x: 0, y: 10, z: 7 }
+                ];
+                const rotX = 0.12, rotY = -0.15;
+                const proj = pts3d.map(v => project3D(v.x, v.y, v.z, rotX, rotY, 0, this.x, this.y + bob));
+                const faces = [
+                    { pts: [0, 1, 4], norm: { x: -0.7, y: -0.5, z: 0.5 } },
+                    { pts: [0, 4, 2], norm: { x: 0.7, y: -0.5, z: 0.5 } },
+                    { pts: [4, 1, 5], norm: { x: -0.8, y: 0.0, z: 0.6 } },
+                    { pts: [4, 5, 2], norm: { x: 0.8, y: 0.0, z: 0.6 } },
+                    { pts: [5, 1, 6], norm: { x: -0.6, y: 0.5, z: 0.62 } },
+                    { pts: [5, 6, 2], norm: { x: 0.6, y: 0.5, z: 0.62 } },
+                    { pts: [6, 1, 3], norm: { x: -0.4, y: 0.8, z: 0.45 } },
+                    { pts: [6, 3, 2], norm: { x: 0.4, y: 0.8, z: 0.45 } }
+                ];
+                faces.forEach(f => {
+                    const drawPts = f.pts.map(idx => proj[idx]);
+                    drawLowPolyFacet(ctx, drawPts, f.norm, '#1e272e');
+                });
+                
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#39ff14';
+                ctx.strokeStyle = '#39ff14';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(proj[0].x, proj[0].y);
+                ctx.lineTo(proj[4].x, proj[4].y);
+                ctx.lineTo(proj[5].x, proj[5].y);
+                ctx.lineTo(proj[6].x, proj[6].y);
+                ctx.lineTo(proj[3].x, proj[3].y);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ff7675';
+                ctx.fillRect(proj[4].x - 1, proj[4].y, 2, 4);
+                
+                if (this.level >= 3) {
+                    // VPN 감속 마우스 overlay shield box
+                    ctx.strokeStyle = '#00d2d3';
+                    ctx.lineWidth = 1.2;
+                    ctx.shadowColor = '#00d2d3';
+                    ctx.strokeRect(this.x - 14, this.y - 14 + bob, 28, 28);
+                }
+            }
             ctx.restore();
         } 
         else if (this.type === 'laptop') {
-            // IDE Server: Dual stacked perspective server units
             ctx.save();
-
-            const drawServerUnit = (cy, w, h, baseColor) => {
-                const w2 = w / 2, h2 = h / 2;
-                // Draw beveled top
+            if (this.level >= 5) {
+                // AI GPU 서버 클러스터: Cabinet with dual rotating cooling fan blades
                 drawLowPolyFacet(ctx, [
-                    { x: this.x - w2, y: cy - h2 + bob },
-                    { x: this.x + w2, y: cy - h2 + bob },
-                    { x: this.x + w2 + 2, y: cy - h2 + 4 + bob },
-                    { x: this.x - w2 - 2, y: cy - h2 + 4 + bob }
-                ], { x: 0, y: -0.5, z: 0.86 }, baseColor);
-
-                // Draw front face
+                    { x: this.x - 16, y: this.y - 20 + bob },
+                    { x: this.x + 16, y: this.y - 20 + bob },
+                    { x: this.x + 18, y: this.y - 16 + bob },
+                    { x: this.x - 18, y: this.y - 16 + bob }
+                ], { x: 0, y: -0.5, z: 0.86 }, '#2f3542');
                 drawLowPolyFacet(ctx, [
-                    { x: this.x - w2 - 2, y: cy - h2 + 4 + bob },
-                    { x: this.x + w2 + 2, y: cy - h2 + 4 + bob },
-                    { x: this.x + w2 + 2, y: cy + h2 + bob },
-                    { x: this.x - w2 - 2, y: cy + h2 + bob }
-                ], { x: 0, y: 0.8, z: 0.6 }, scaleColor(baseColor, 0.8));
-            };
-
-            // Stack 2 server cabinets
-            drawServerUnit(6, 36, 12, '#3f4b5b');  // Bottom server unit
-            drawServerUnit(-6, 36, 12, '#3f4b5b'); // Top server unit
-
-            // Blinking LEDs
-            const blink = Math.floor(Date.now() / 300) % 2 === 0;
-            ctx.shadowBlur = 6;
-            ctx.shadowColor = blink ? '#2ecc71' : '#e74c3c';
-            
-            // LED points (diamonds)
-            const drawLed = (cx, cy, color) => {
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.moveTo(cx, cy - 2);
-                ctx.lineTo(cx + 2, cy);
-                ctx.lineTo(cx, cy + 2);
-                ctx.lineTo(cx - 2, cy);
-                ctx.closePath();
-                ctx.fill();
-            };
-            drawLed(this.x - 14, this.y - 4 + bob, blink ? '#2ecc71' : '#27ae60');
-            drawLed(this.x - 14, this.y + 8 + bob, !blink ? '#e74c3c' : '#c0392b');
-            ctx.shadowBlur = 0;
-
-            // HDD slot blocks
-            ctx.fillStyle = '#1e272e';
-            ctx.fillRect(this.x - 9, this.y - 5 + bob, 5, 3);
-            ctx.fillRect(this.x - 9, this.y + 7 + bob, 5, 3);
-
-            // Miniature terminal screen showing code lines
-            ctx.fillStyle = '#1e272e';
-            ctx.fillRect(this.x + 2, this.y - 7 + bob, 14, 20);
-            ctx.strokeStyle = '#57606f';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(this.x + 2, this.y - 7 + bob, 14, 20);
-
-            // Matrix green lines code mock
-            ctx.fillStyle = '#00ecc6';
-            ctx.fillRect(this.x + 4, this.y - 4 + bob, 10, 1.5);
-            ctx.fillRect(this.x + 4, this.y - 1 + bob, 7, 1.5);
-            ctx.fillRect(this.x + 4, this.y + 2 + bob, 11, 1.5);
-            ctx.fillRect(this.x + 4, this.y + 5 + bob, 8, 1.5);
-
+                    { x: this.x - 18, y: this.y - 16 + bob },
+                    { x: this.x + 18, y: this.y - 16 + bob },
+                    { x: this.x + 18, y: this.y + 16 + bob },
+                    { x: this.x - 18, y: this.y + 16 + bob }
+                ], { x: 0, y: 0.8, z: 0.6 }, '#1e272e');
+                
+                const fanAngle = Date.now() / 120;
+                const drawFan = (cx, cy) => {
+                    ctx.strokeStyle = '#00ffcc';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx - Math.cos(fanAngle)*5, cy - Math.sin(fanAngle)*5);
+                    ctx.lineTo(cx + Math.cos(fanAngle)*5, cy + Math.sin(fanAngle)*5);
+                    ctx.moveTo(cx - Math.sin(fanAngle)*5, cy + Math.cos(fanAngle)*5);
+                    ctx.lineTo(cx + Math.sin(fanAngle)*5, cy - Math.cos(fanAngle)*5);
+                    ctx.stroke();
+                };
+                drawFan(this.x - 8, this.y - 2 + bob);
+                drawFan(this.x + 8, this.y - 2 + bob);
+                
+                ctx.fillStyle = '#ffcc00'; // Gold accent led strip
+                ctx.fillRect(this.x - 12, this.y - 12 + bob, 24, 2);
+            } else if (this.level >= 3) {
+                // Kubernetes 컨테이너: Stack of 3 mini glowing blue container boxes
+                const drawPod = (cx, cy, color) => {
+                    drawLowPolyFacet(ctx, [
+                        {x: cx - 8, y: cy - 4 + bob},
+                        {x: cx + 8, y: cy - 4 + bob},
+                        {x: cx + 10, y: cy + bob},
+                        {x: cx - 10, y: cy + bob}
+                    ], {x: 0, y: -0.5, z: 0.86}, color);
+                    drawLowPolyFacet(ctx, [
+                        {x: cx - 10, y: cy + bob},
+                        {x: cx + 10, y: cy + bob},
+                        {x: cx + 10, y: cy + 8 + bob},
+                        {x: cx - 10, y: cy + 8 + bob}
+                    ], {x: 0, y: 0.8, z: 0.6}, scaleColor(color, 0.8));
+                };
+                drawPod(this.x - 8, this.y + 4, '#3498db');
+                drawPod(this.x + 8, this.y + 4, '#3498db');
+                drawPod(this.x, this.y - 6, '#00f0ff');
+            } else {
+                // Base IDE Server
+                const drawServerUnit = (cy, w, h, baseColor) => {
+                    const w2 = w / 2, h2 = h / 2;
+                    drawLowPolyFacet(ctx, [
+                        { x: this.x - w2, y: cy - h2 + bob },
+                        { x: this.x + w2, y: cy - h2 + bob },
+                        { x: this.x + w2 + 2, y: cy - h2 + 4 + bob },
+                        { x: this.x - w2 - 2, y: cy - h2 + 4 + bob }
+                    ], { x: 0, y: -0.5, z: 0.86 }, baseColor);
+                    drawLowPolyFacet(ctx, [
+                        { x: this.x - w2 - 2, y: cy - h2 + 4 + bob },
+                        { x: this.x + w2 + 2, y: cy - h2 + 4 + bob },
+                        { x: this.x + w2 + 2, y: cy + h2 + bob },
+                        { x: this.x - w2 - 2, y: cy + h2 + bob }
+                    ], { x: 0, y: 0.8, z: 0.6 }, scaleColor(baseColor, 0.8));
+                };
+                drawServerUnit(6, 36, 12, '#3f4b5b');
+                drawServerUnit(-6, 36, 12, '#3f4b5b');
+                
+                const blink = Math.floor(Date.now() / 300) % 2 === 0;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = blink ? '#2ecc71' : '#e74c3c';
+                const drawLed = (cx, cy, color) => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - 2); ctx.lineTo(cx + 2, cy);
+                    ctx.lineTo(cx, cy + 2); ctx.lineTo(cx - 2, cy);
+                    ctx.closePath(); ctx.fill();
+                };
+                drawLed(this.x - 14, this.y - 4 + bob, blink ? '#2ecc71' : '#27ae60');
+                drawLed(this.x - 14, this.y + 8 + bob, !blink ? '#e74c3c' : '#c0392b');
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#1e272e';
+                ctx.fillRect(this.x - 9, this.y - 5 + bob, 5, 3);
+                ctx.fillRect(this.x - 9, this.y + 7 + bob, 5, 3);
+                ctx.fillStyle = '#1e272e';
+                ctx.fillRect(this.x + 2, this.y - 7 + bob, 14, 20);
+                ctx.strokeStyle = '#57606f';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(this.x + 2, this.y - 7 + bob, 14, 20);
+                ctx.fillStyle = '#00ecc6';
+                ctx.fillRect(this.x + 4, this.y - 4 + bob, 10, 1.5);
+                ctx.fillRect(this.x + 4, this.y - 1 + bob, 7, 1.5);
+                ctx.fillRect(this.x + 4, this.y + 2 + bob, 11, 1.5);
+                ctx.fillRect(this.x + 4, this.y + 5 + bob, 8, 1.5);
+            }
             ctx.restore();
         } 
         else if (this.type === 'iphone') {
-            // Jenkins CI: cabinet rack with spinning build stage bulbs (octahedrons)
             ctx.save();
-            // Cabinet Frame (rectangular prism base)
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 14, y: this.y - 18 + bob },
-                { x: this.x + 14, y: this.y - 18 + bob },
-                { x: this.x + 16, y: this.y - 14 + bob },
-                { x: this.x - 16, y: this.y - 14 + bob }
-            ], { x: 0, y: -0.5, z: 0.86 }, '#4a5768');
-
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 16, y: this.y - 14 + bob },
-                { x: this.x + 16, y: this.y - 14 + bob },
-                { x: this.x + 16, y: this.y + 16 + bob },
-                { x: this.x - 16, y: this.y + 16 + bob }
-            ], { x: 0, y: 0.8, z: 0.6 }, '#343f4c');
-
-            // Side panels
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 14, y: this.y - 18 + bob },
-                { x: this.x - 16, y: this.y - 14 + bob },
-                { x: this.x - 16, y: this.y + 16 + bob },
-                { x: this.x - 14, y: this.y + 12 + bob }
-            ], { x: -0.98, y: 0.2, z: 0 }, '#1e242d');
-
-            // Render 3 mini rotating 3D octahedrons for build stages
-            const R = 4.5;
-            const pts3d = [
-                { x: 0, y: -R, z: 0 },
-                { x: 0, y: R, z: 0 },
-                { x: -R, y: 0, z: -R },
-                { x: R, y: 0, z: -R },
-                { x: R, y: 0, z: R },
-                { x: -R, y: 0, z: R }
-            ];
-
-            const rotX = 0.2;
-            const rotY = Date.now() / 200; // spin around Y axis
-
-            const faces = [
-                [0, 5, 4], [0, 4, 3], [0, 3, 2], [0, 2, 5],
-                [1, 4, 5], [1, 3, 4], [1, 2, 3], [1, 5, 2]
-            ];
-
-            const drawStageBulb = (cy, color) => {
-                const rotated = pts3d.map(v => {
+            if (this.level >= 5) {
+                // ELK 로그 추적 시스템: Orange stacked hexagon prisms with bar graphs
+                const drawHexElk = (cy, color) => {
+                    const topPts = [], botPts = [];
+                    const R_hex = 14;
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i * Math.PI) / 3;
+                        const rx = Math.cos(angle) * R_hex;
+                        const rz = Math.sin(angle) * R_hex * 0.4;
+                        topPts.push({ x: this.x + rx, y: cy - 3.5 + rz + bob });
+                        botPts.push({ x: this.x + rx, y: cy + 3.5 + rz + bob });
+                    }
+                    drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, color);
+                    for (let i = 0; i < 6; i++) {
+                        const next = (i + 1) % 6;
+                        drawLowPolyFacet(ctx, [topPts[i], topPts[next], botPts[next], botPts[i]], { x: 0, y: 0.8, z: 0.6 }, scaleColor(color, 0.8 - (i%2)*0.1));
+                    }
+                };
+                drawHexElk(this.y + 10, '#fa8231');
+                drawHexElk(this.y + 2, '#fa8231');
+                drawHexElk(this.y - 6, '#fa8231');
+                
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(this.x - 6, this.y - 1 + bob, 3, 4);
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(this.x - 1, this.y - 3 + bob, 3, 6);
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(this.x + 4, this.y + bob, 3, 3);
+            } else if (this.level >= 3) {
+                // Jenkins 파이프라인: Conveyor belt connector with stage blocks
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillRect(this.x - 16, this.y + 8 + bob, 32, 4);
+                
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(this.x - 12, this.y - 4 + bob, 6, 6);
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(this.x, this.y - 6 + bob, 6, 6);
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(this.x + 8, this.y - 2 + bob, 6, 6);
+                
+                ctx.strokeStyle = '#00f0ff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x - 9, this.y - 1 + bob);
+                ctx.lineTo(this.x + 3, this.y - 3 + bob);
+                ctx.lineTo(this.x + 11, this.y + 1 + bob);
+                ctx.stroke();
+            } else {
+                // Base Jenkins CI cabinet
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 14, y: this.y - 18 + bob },
+                    { x: this.x + 14, y: this.y - 18 + bob },
+                    { x: this.x + 16, y: this.y - 14 + bob },
+                    { x: this.x - 16, y: this.y - 14 + bob }
+                ], { x: 0, y: -0.5, z: 0.86 }, '#4a5768');
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 16, y: this.y - 14 + bob },
+                    { x: this.x + 16, y: this.y - 14 + bob },
+                    { x: this.x + 16, y: this.y + 16 + bob },
+                    { x: this.x - 16, y: this.y + 16 + bob }
+                ], { x: 0, y: 0.8, z: 0.6 }, '#343f4c');
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 14, y: this.y - 18 + bob },
+                    { x: this.x - 16, y: this.y - 14 + bob },
+                    { x: this.x - 16, y: this.y + 16 + bob },
+                    { x: this.x - 14, y: this.y + 12 + bob }
+                ], { x: -0.98, y: 0.2, z: 0 }, '#1e242d');
+                
+                const R = 4.5;
+                const pts3d = [
+                    { x: 0, y: -R, z: 0 }, { x: 0, y: R, z: 0 }, { x: -R, y: 0, z: -R },
+                    { x: R, y: 0, z: -R }, { x: R, y: 0, z: R }, { x: -R, y: 0, z: R }
+                ];
+                const rotX = 0.2, rotY = Date.now() / 200;
+                const faces = [
+                    [0, 5, 4], [0, 4, 3], [0, 3, 2], [0, 2, 5],
+                    [1, 4, 5], [1, 3, 4], [1, 2, 3], [1, 5, 2]
+                ];
+                const drawStageBulb = (cy, color) => {
+                    const rotated = pts3d.map(v => {
+                        let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                        let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                        let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                        let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                        return { x: x1, y: y2, z: z2 };
+                    });
+                    const proj = rotated.map(r => {
+                        const dist = 120;
+                        const scale = 1.0 / (1.0 + r.z / dist);
+                        return { x: this.x + r.x * scale, y: cy + bob + r.y * scale };
+                    });
+                    faces.forEach(f => {
+                        const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
+                        if (norm.z > 0) {
+                            drawLowPolyFacet(ctx, [proj[f[0]], proj[f[1]], proj[f[2]]], norm, color);
+                        }
+                    });
+                };
+                const pulse = Math.abs(Math.sin(Date.now() / 250)) * 0.3 + 0.7;
+                drawStageBulb(this.y - 6, `rgba(46, 204, 113, ${pulse})`);
+                drawStageBulb(this.y + 2, `rgba(241, 196, 15, ${pulse})`);
+                drawStageBulb(this.y + 10, '#ff7675');
+            }
+            ctx.restore();
+        } 
+        else if (this.type === 'headset') {
+            ctx.save();
+            if (this.level >= 5) {
+                // Grafana 대시보드: Wireframe cube containing bar graphs
+                const edgePts = [
+                    {x: -12, y: -12, z: -12}, {x: 12, y: -12, z: -12}, {x: 12, y: -12, z: 12}, {x: -12, y: -12, z: 12},
+                    {x: -12, y: 12, z: -12}, {x: 12, y: 12, z: -12}, {x: 12, y: 12, z: 12}, {x: -12, y: 12, z: 12}
+                ];
+                const rotX = Date.now() / 400, rotY = Date.now() / 300;
+                const rotated = edgePts.map(v => {
                     let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
                     let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
                     let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
                     let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
                     return { x: x1, y: y2, z: z2 };
                 });
-
                 const proj = rotated.map(r => {
                     const dist = 120;
                     const scale = 1.0 / (1.0 + r.z / dist);
-                    return { x: this.x + r.x * scale, y: cy + bob + r.y * scale };
+                    return { x: this.x + r.x * scale, y: this.y - 2 + bob + r.y * scale };
                 });
-
+                // Connect cube frame edges
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 1.2;
+                const drawLine = (i, j) => {
+                    ctx.beginPath(); ctx.moveTo(proj[i].x, proj[i].y); ctx.lineTo(proj[j].x, proj[j].y); ctx.stroke();
+                };
+                drawLine(0,1); drawLine(1,2); drawLine(2,3); drawLine(3,0);
+                drawLine(4,5); drawLine(5,6); drawLine(6,7); drawLine(7,4);
+                drawLine(0,4); drawLine(1,5); drawLine(2,6); drawLine(3,7);
+                
+                // Draw a mini graph bar inside cube
+                ctx.fillStyle = '#ff7675';
+                ctx.fillRect(this.x - 4, this.y - 4 + bob, 3, 8);
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(this.x + 1, this.y - 7 + bob, 3, 11);
+            } else {
+                // AI Assistant floating orb
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 14, y: this.y + 10 + bob },
+                    { x: this.x + 14, y: this.y + 10 + bob },
+                    { x: this.x + 10, y: this.y + 6 + bob },
+                    { x: this.x - 10, y: this.y + 6 + bob }
+                ], { x: 0, y: -0.5, z: 0.86 }, '#7f8c8d');
+                drawLowPolyFacet(ctx, [
+                    { x: this.x - 14, y: this.y + 10 + bob },
+                    { x: this.x + 14, y: this.y + 10 + bob },
+                    { x: this.x + 16, y: this.y + 16 + bob },
+                    { x: this.x - 16, y: this.y + 16 + bob }
+                ], { x: 0, y: 0.8, z: 0.6 }, '#5a6268');
+                
+                const R = this.level >= 3 ? 18 : 15;
+                const phi = (1 + Math.sqrt(5)) / 2;
+                const a = R / Math.sqrt(1 + phi * phi), b = phi * a;
+                const vertices = [
+                    { x: -a, y: b, z: 0 }, { x: a, y: b, z: 0 }, { x: -a, y: -b, z: 0 }, { x: a, y: -b, z: 0 },
+                    { x: 0, y: -a, z: b }, { x: 0, y: a, z: b }, { x: 0, y: -a, z: -b }, { x: 0, y: a, z: -b },
+                    { x: b, y: 0, z: -a }, { x: b, y: 0, z: a }, { x: -b, y: 0, z: -a }, { x: -b, y: 0, z: a }
+                ];
+                const faces = [
+                    [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+                    [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+                    [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+                    [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+                ];
+                const rotX = Date.now() / 450, rotY = Date.now() / 250;
+                const rotated = vertices.map(v => {
+                    let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                    let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                    let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                    let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                    return { x: x1, y: y2, z: z2 };
+                });
+                const proj = rotated.map(r => {
+                    const dist = 120;
+                    const scale = 1.0 / (1.0 + r.z / dist);
+                    return { x: this.x + r.x * scale, y: this.y - 6 + bob + r.y * scale };
+                });
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.level >= 3 ? '#2ecc71' : '#00f0ff';
                 faces.forEach(f => {
                     const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
                     if (norm.z > 0) {
-                        drawLowPolyFacet(ctx, [proj[f[0]], proj[f[1]], proj[f[2]]], norm, color);
+                        ctx.fillStyle = this.level >= 3 ? 'rgba(46, 204, 113, 0.15)' : 'rgba(0, 240, 255, 0.15)';
+                        ctx.strokeStyle = this.level >= 3 ? '#2ecc71' : '#00f0ff';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(proj[f[0]].x, proj[f[0]].y);
+                        ctx.lineTo(proj[f[1]].x, proj[f[1]].y);
+                        ctx.lineTo(proj[f[2]].x, proj[f[2]].y);
+                        ctx.closePath(); ctx.fill(); ctx.stroke();
                     }
                 });
-            };
-
-            const pulse = Math.abs(Math.sin(Date.now() / 250)) * 0.3 + 0.7;
-            drawStageBulb(this.y - 6, `rgba(46, 204, 113, ${pulse})`); // Top stage (Green success)
-            drawStageBulb(this.y + 2, `rgba(241, 196, 15, ${pulse})`); // Mid stage (Yellow processing)
-            drawStageBulb(this.y + 10, '#ff7675');                    // Bottom stage (Red failed)
-
-            ctx.restore();
-        } 
-        else if (this.type === 'headset') {
-            // AI Assistant: Floating rotating Y-axis 3D crystalline head mesh (icosahedron)
-            ctx.save();
-
-            // Pedestal (trapezoidal silver base)
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 14, y: this.y + 10 + bob },
-                { x: this.x + 14, y: this.y + 10 + bob },
-                { x: this.x + 10, y: this.y + 6 + bob },
-                { x: this.x - 10, y: this.y + 6 + bob }
-            ], { x: 0, y: -0.5, z: 0.86 }, '#7f8c8d');
-
-            drawLowPolyFacet(ctx, [
-                { x: this.x - 14, y: this.y + 10 + bob },
-                { x: this.x + 14, y: this.y + 10 + bob },
-                { x: this.x + 16, y: this.y + 16 + bob },
-                { x: this.x - 16, y: this.y + 16 + bob }
-            ], { x: 0, y: 0.8, z: 0.6 }, '#5a6268');
-
-            // Floating Hologram Orb (3D Icosahedron)
-            const R = 15;
-            const phi = (1 + Math.sqrt(5)) / 2;
-            const a = R / Math.sqrt(1 + phi * phi);
-            const b = phi * a;
-
-            const vertices = [
-                { x: -a, y: b, z: 0 }, { x: a, y: b, z: 0 }, { x: -a, y: -b, z: 0 }, { x: a, y: -b, z: 0 },
-                { x: 0, y: -a, z: b }, { x: 0, y: a, z: b }, { x: 0, y: -a, z: -b }, { x: 0, y: a, z: -b },
-                { x: b, y: 0, z: -a }, { x: b, y: 0, z: a }, { x: -b, y: 0, z: -a }, { x: -b, y: 0, z: a }
-            ];
-
-            const faces = [
-                [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-                [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-                [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-                [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
-            ];
-
-            // Rotation angles
-            const rotX = Date.now() / 450;
-            const rotY = Date.now() / 250;
-
-            // Rotate coordinates
-            const rotated = vertices.map(v => {
-                let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
-                let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
-                let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
-                let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
-                return { x: x1, y: y2, z: z2 };
-            });
-
-            // Project rotated coordinates to 2D
-            const proj = rotated.map(r => {
-                const dist = 120;
-                const scale = 1.0 / (1.0 + r.z / dist);
-                return { x: this.x + r.x * scale, y: this.y - 6 + bob + r.y * scale };
-            });
-
-            // Render faces of hologram (semi-transparent fills, cyan outlines)
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00f0ff';
-            
-            faces.forEach(f => {
-                const norm = getNormal(rotated[f[0]], rotated[f[1]], rotated[f[2]]);
-                if (norm.z > 0) {
-                    ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
-                    ctx.strokeStyle = '#00f0ff';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(proj[f[0]].x, proj[f[0]].y);
-                    ctx.lineTo(proj[f[1]].x, proj[f[1]].y);
-                    ctx.lineTo(proj[f[2]].x, proj[f[2]].y);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                }
-            });
-
-            // Vertices glowing indicator circles
-            ctx.fillStyle = '#ffffff';
-            proj.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
+                ctx.fillStyle = '#ffffff';
+                proj.forEach(p => {
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2); ctx.fill();
+                });
+            }
             ctx.restore();
         } 
         else if (this.type === 'coffee') {
-            // Postgres DB: 3 Stacked database hexagonal cylinder units
             ctx.save();
-            
-            const dbW = 32;
-            const dbH = 7;
-            const R_hex = 15;
-
-            const drawHexPrism = (cy, color) => {
-                const topPts = [];
-                const botPts = [];
-                // Calculate hexagonal vertices
+            if (this.level >= 5) {
+                // 분산 데이터베이스: 3 mini hexagonal database units in triangle
+                const drawMiniHex = (cx, cy) => {
+                    const topPts = [], botPts = [];
+                    const R = 8;
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i * Math.PI) / 3;
+                        topPts.push({ x: cx + Math.cos(angle)*R, y: cy - 2.5 + Math.sin(angle)*R*0.4 + bob });
+                        botPts.push({ x: cx + Math.cos(angle)*R, y: cy + 2.5 + Math.sin(angle)*R*0.4 + bob });
+                    }
+                    drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, '#1dd1a1');
+                    for (let i = 0; i < 6; i++) {
+                        const next = (i + 1) % 6;
+                        drawLowPolyFacet(ctx, [topPts[i], topPts[next], botPts[next], botPts[i]], { x: 0, y: 0.8, z: 0.6 }, '#10ac84');
+                    }
+                };
+                drawMiniHex(this.x - 10, this.y + 6);
+                drawMiniHex(this.x + 10, this.y + 6);
+                drawMiniHex(this.x, this.y - 6);
+                // laser link lines
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x - 10, this.y + 6 + bob);
+                ctx.lineTo(this.x + 10, this.y + 6 + bob);
+                ctx.lineTo(this.x, this.y - 6 + bob);
+                ctx.closePath(); ctx.stroke();
+            } else if (this.level >= 3) {
+                // Redis Cache 버퍼: Glowing red/pink hexagonal prism base
+                const R_hex = 16;
+                const topPts = [], botPts = [];
                 for (let i = 0; i < 6; i++) {
                     const angle = (i * Math.PI) / 3;
-                    const rx = Math.cos(angle) * R_hex;
-                    const rz = Math.sin(angle) * R_hex * 0.45; // slightly flattened perspective
-                    topPts.push({ x: this.x + rx, y: cy - dbH / 2 + rz + bob });
-                    botPts.push({ x: this.x + rx, y: cy + dbH / 2 + rz + bob });
+                    topPts.push({ x: this.x + Math.cos(angle)*R_hex, y: this.y - 3 + Math.sin(angle)*R_hex*0.4 + bob });
+                    botPts.push({ x: this.x + Math.cos(angle)*R_hex, y: this.y + 5 + Math.sin(angle)*R_hex*0.4 + bob });
                 }
-
-                // Draw top hexagon panel
-                drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, color);
-
-                // Draw 6 side panels
+                drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, '#ff7675');
                 for (let i = 0; i < 6; i++) {
                     const next = (i + 1) % 6;
-                    const panelColor = scaleColor(color, 0.8 - (i % 3) * 0.1);
-                    drawLowPolyFacet(ctx, [
-                        topPts[i], topPts[next], botPts[next], botPts[i]
-                    ], { x: 0, y: 0.8, z: 0.6 }, panelColor);
+                    drawLowPolyFacet(ctx, [topPts[i], topPts[next], botPts[next], botPts[i]], { x: 0, y: 0.8, z: 0.6 }, '#d63031');
                 }
-            };
-
-            // Stack 3 hexagonal prisms
-            drawHexPrism(this.y + 10, '#0a9396'); // Bottom disk
-            drawHexPrism(this.y + 2, '#0a9396');  // Mid disk
-            drawHexPrism(this.y - 6, '#0a9396');  // Top disk
-
-            // Flashing LEDs on front panels
-            const pulse = Math.floor(Date.now() / 250) % 3 === 0;
-            ctx.fillStyle = pulse ? '#00f0ff' : '#005f73';
-            ctx.fillRect(this.x - 2, this.y - 4 + bob, 3, 3);
-            ctx.fillStyle = !pulse ? '#00f0ff' : '#005f73';
-            ctx.fillRect(this.x - 2, this.y + 4 + bob, 3, 3);
-
+                // Pulsing red LED
+                const pulse = Math.abs(Math.sin(Date.now() / 150));
+                ctx.fillStyle = `rgba(255, 118, 117, ${pulse})`;
+                ctx.fillRect(this.x - 3, this.y - 1 + bob, 6, 4);
+            } else {
+                // Base 3 stacked hexagonal databases
+                const dbW = 32, dbH = 7, R_hex = 15;
+                const drawHexPrism = (cy, color) => {
+                    const topPts = [], botPts = [];
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i * Math.PI) / 3;
+                        topPts.push({ x: this.x + Math.cos(angle) * R_hex, y: cy - dbH / 2 + Math.sin(angle) * R_hex * 0.45 + bob });
+                        botPts.push({ x: this.x + Math.cos(angle) * R_hex, y: cy + dbH / 2 + Math.sin(angle) * R_hex * 0.45 + bob });
+                    }
+                    drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, color);
+                    for (let i = 0; i < 6; i++) {
+                        const next = (i + 1) % 6;
+                        drawLowPolyFacet(ctx, [topPts[i], topPts[next], botPts[next], botPts[i]], { x: 0, y: 0.8, z: 0.6 }, scaleColor(color, 0.8 - (i % 3) * 0.1));
+                    }
+                };
+                drawHexPrism(this.y + 10, '#0a9396');
+                drawHexPrism(this.y + 2, '#0a9396');
+                drawHexPrism(this.y - 6, '#0a9396');
+                const pulse = Math.floor(Date.now() / 250) % 3 === 0;
+                ctx.fillStyle = pulse ? '#00f0ff' : '#005f73';
+                ctx.fillRect(this.x - 2, this.y - 4 + bob, 3, 3);
+                ctx.fillStyle = !pulse ? '#00f0ff' : '#005f73';
+                ctx.fillRect(this.x - 2, this.y + 4 + bob, 3, 3);
+            }
             ctx.restore();
         } 
         else if (this.type === 'snack') {
-            // Snack roadblock: Folded origami potato chips bag and empty red soda can
             ctx.save();
-
-            // Low-poly Soda Can (Red Pentagonal Prism)
-            const drawSodaCan = (cx, cy) => {
-                const R = 5;
-                const topPts = [];
-                const botPts = [];
-                for (let i = 0; i < 5; i++) {
-                    const angle = (i * Math.PI * 2) / 5;
-                    const rx = Math.cos(angle) * R;
-                    const rz = Math.sin(angle) * R * 0.5;
-                    topPts.push({ x: cx + rx, y: cy - 6 + rz });
-                    botPts.push({ x: cx + rx, y: cy + 6 + rz });
-                }
-                // Top cap
-                drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, '#bdc3c7');
-                // Sides
-                for (let i = 0; i < 5; i++) {
-                    const next = (i + 1) % 5;
-                    drawLowPolyFacet(ctx, [
-                        topPts[i], topPts[next], botPts[next], botPts[i]
-                    ], { x: 0, y: 0.8, z: 0.6 }, '#e74c3c');
-                }
-            };
-            drawSodaCan(this.x - 12, this.y + 2);
-
-            // Folded Origami Chip Bag (Yellow wedge)
-            drawLowPolyFacet(ctx, [
-                { x: this.x + 2, y: this.y + 12 },
-                { x: this.x + 16, y: this.y + 10 },
-                { x: this.x + 14, y: this.y - 7 },
-                { x: this.x + 2, y: this.y - 10 }
-            ], { x: 0, y: 0.2, z: 0.98 }, '#ffeaa7');
-
-            // Beveled folded bottom flap
-            drawLowPolyFacet(ctx, [
-                { x: this.x + 2, y: this.y + 12 },
-                { x: this.x + 16, y: this.y + 10 },
-                { x: this.x + 12, y: this.y + 16 },
-                { x: this.x + 0, y: this.y + 18 }
-            ], { x: 0, y: 0.8, z: 0.6 }, '#ffe066');
-
-            // Flavor text tag
-            ctx.fillStyle = '#e67e22';
-            ctx.font = 'bold 5px Arial';
-            ctx.fillText('CHIPS', this.x + 5, this.y + 2);
-
+            if (this.level >= 5) {
+                // 무제한 간식 냉장고: Small transparent box cabinet fridge with green energy drinks
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 12, y: this.y - 16 + bob},
+                    {x: this.x + 12, y: this.y - 16 + bob},
+                    {x: this.x + 14, y: this.y - 12 + bob},
+                    {x: this.x - 14, y: this.y - 12 + bob}
+                ], {x: 0, y: -0.5, z: 0.86}, '#34495e'); // fridge top
+                
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 14, y: this.y - 12 + bob},
+                    {x: this.x + 14, y: this.y - 12 + bob},
+                    {x: this.x + 14, y: this.y + 16 + bob},
+                    {x: this.x - 14, y: this.y + 16 + bob}
+                ], {x: 0, y: 0.8, z: 0.6}, 'rgba(52, 152, 219, 0.4)'); // glass door
+                
+                // Draw 2 tiny green energy drink cans inside
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(this.x - 6, this.y - 4 + bob, 3, 6);
+                ctx.fillRect(this.x + 3, this.y + 2 + bob, 3, 6);
+            } else if (this.level >= 3) {
+                // 탕비실 간식바구니: Beveled orange basket with detailed snacks
+                drawLowPolyFacet(ctx, [
+                    {x: this.x - 14, y: this.y + 4 + bob},
+                    {x: this.x + 14, y: this.y + 4 + bob},
+                    {x: this.x + 16, y: this.y + 14 + bob},
+                    {x: this.x - 16, y: this.y + 14 + bob}
+                ], {x: 0, y: 0.8, z: 0.6}, '#e67e22'); // orange basket base
+                
+                ctx.fillStyle = '#ffeaa7'; // yellow snacks
+                ctx.fillRect(this.x - 8, this.y - 2 + bob, 5, 7);
+                ctx.fillStyle = '#ff7675'; // red snacks
+                ctx.fillRect(this.x + 2, this.y - 4 + bob, 5, 8);
+            } else {
+                // Base folded chip bag
+                const drawSodaCan = (cx, cy) => {
+                    const R = 5;
+                    const topPts = [], botPts = [];
+                    for (let i = 0; i < 5; i++) {
+                        const angle = (i * Math.PI * 2) / 5;
+                        topPts.push({ x: cx + Math.cos(angle)*R, y: cy - 6 + Math.sin(angle)*R*0.5 });
+                        botPts.push({ x: cx + Math.cos(angle)*R, y: cy + 6 + Math.sin(angle)*R*0.5 });
+                    }
+                    drawLowPolyFacet(ctx, topPts, { x: 0, y: -1, z: 0 }, '#bdc3c7');
+                    for (let i = 0; i < 5; i++) {
+                        const next = (i + 1) % 5;
+                        drawLowPolyFacet(ctx, [topPts[i], topPts[next], botPts[next], botPts[i]], { x: 0, y: 0.8, z: 0.6 }, '#e74c3c');
+                    }
+                };
+                drawSodaCan(this.x - 12, this.y + 2);
+                drawLowPolyFacet(ctx, [
+                    { x: this.x + 2, y: this.y + 12 }, { x: this.x + 16, y: this.y + 10 },
+                    { x: this.x + 14, y: this.y - 7 }, { x: this.x + 2, y: this.y - 10 }
+                ], { x: 0, y: 0.2, z: 0.98 }, '#ffeaa7');
+                drawLowPolyFacet(ctx, [
+                    { x: this.x + 2, y: this.y + 12 }, { x: this.x + 16, y: this.y + 10 },
+                    { x: this.x + 12, y: this.y + 16 }, { x: this.x + 0, y: this.y + 18 }
+                ], { x: 0, y: 0.8, z: 0.6 }, '#ffe066');
+                ctx.fillStyle = '#e67e22';
+                ctx.font = 'bold 5px Arial';
+                ctx.fillText('CHIPS', this.x + 5, this.y + 2);
+            }
             ctx.restore();
         }
 
@@ -2759,6 +3457,13 @@ const game = {
         this.floatingTexts = [];
         this.activeStacks = [];
         this.obstacles = [];
+        this.npcs = [
+            new NPC('dev', '초롱이', 0, 7),
+            new NPC('dev', '민우', 1, 7),
+            new NPC('qa', '수진', 0, 4),
+            new NPC('pm', '김팀장', 9, 4),
+            new NPC('infra', '박엔지니어', 1, 11)
+        ];
 
         this.selectedShopTower = null;
         this.selectedPlacedTower = null;
@@ -2815,10 +3520,11 @@ const game = {
             
             // Check start/end desks
             if (gx === 1 && gy === 1) continue;
-            if (gx === 9 && gy === 10) continue;
-            
             // Check duplicate
             if (this.obstacles.some(ob => ob.x === gx && ob.y === gy)) continue;
+            
+            // Check NPC workstations conflict
+            if ((gx === 0 && gy === 7) || (gx === 1 && gy === 7) || (gx === 0 && gy === 4) || (gx === 9 && gy === 4) || (gx === 1 && gy === 11)) continue;
             
             this.obstacles.push({
                 x: gx,
@@ -2961,7 +3667,7 @@ const game = {
         const panel = document.getElementById('tower-info-panel');
         panel.classList.remove('hidden');
 
-        document.getElementById('selected-tower-name').innerText = `${tower.name} (Level ${tower.level})`;
+        document.getElementById('selected-tower-name').innerText = `${tower.getName()} (Level ${tower.level})`;
         
         if (tower.type === 'snack') {
             document.getElementById('stat-damage').innerText = '스턴 4초';
@@ -3454,6 +4160,10 @@ const game = {
             }
         });
         this.particles = this.particles.filter(p => p.life > 0);
+
+        if (this.npcs) {
+            this.npcs.forEach(n => n.update(dt));
+        }
     },
 
     drawWorld() {
@@ -3533,6 +4243,11 @@ const game = {
         this.obstacles.forEach(ob => {
             this.drawObstacle(this.ctx, ob.x * CELL_SIZE, ob.y * CELL_SIZE, ob.char);
         });
+
+        // 3.5 Draw NPCs
+        if (this.npcs) {
+            this.npcs.forEach(npc => npc.draw(this.ctx));
+        }
 
         // 4. Draw Towers
         this.towers.forEach(t => t.draw(this.ctx));
@@ -4137,6 +4852,15 @@ const game = {
         
         const hpPercent = Math.max(0, this.hp);
         document.getElementById('hud-hp-bar').style.width = `${hpPercent}%`;
+
+        const caffeineWarning = document.getElementById('caffeine-warning');
+        if (caffeineWarning) {
+            if (this.caffeineLevel > 3.0) {
+                caffeineWarning.classList.remove('hidden');
+            } else {
+                caffeineWarning.classList.add('hidden');
+            }
+        }
 
         const discount = 1 - this.buffs.costDiscount;
         document.querySelectorAll('.shop-item').forEach(el => {
