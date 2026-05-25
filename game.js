@@ -21,20 +21,20 @@ jrpgTiles.src = 'cat_office_tiles.png';
 
 // Grid configuration
 const GRID_COLS = 11;
-const GRID_ROWS = 17;
+const GRID_ROWS = 12;
 const CELL_SIZE = 40;
 const CANVAS_WIDTH = GRID_COLS * CELL_SIZE;  // 440
-const CANVAS_HEIGHT = GRID_ROWS * CELL_SIZE; // 680
+const CANVAS_HEIGHT = GRID_ROWS * CELL_SIZE; // 480
 
 // Path coordinates (Grid points winding down 4 floors)
 const pathGrid = [
-    {x: 1, y: 2}, {x: 2, y: 2}, {x: 3, y: 2}, // Floor 4 (Reception)
-    {x: 3, y: 3}, {x: 3, y: 4}, {x: 3, y: 5}, {x: 3, y: 6}, // Staircase 1 (Down)
-    {x: 4, y: 6}, {x: 5, y: 6}, {x: 6, y: 6}, {x: 7, y: 6}, // Floor 3 Corridor
-    {x: 7, y: 7}, {x: 7, y: 8}, {x: 7, y: 9}, {x: 7, y: 10}, // Staircase 2 (Down)
-    {x: 6, y: 10}, {x: 5, y: 10}, {x: 4, y: 10}, {x: 3, y: 10}, {x: 2, y: 10}, // Floor 2 Corridor
-    {x: 2, y: 11}, {x: 2, y: 12}, {x: 2, y: 13}, {x: 2, y: 14}, // Staircase 3 (Down)
-    {x: 3, y: 14}, {x: 4, y: 14}, {x: 5, y: 14}, {x: 6, y: 14}, {x: 7, y: 14}, {x: 8, y: 14}, {x: 9, y: 14} // Floor 1 Server Room
+    {x: 1, y: 1}, {x: 2, y: 1}, {x: 3, y: 1}, // Floor 4 (Reception)
+    {x: 3, y: 2}, {x: 3, y: 3}, {x: 3, y: 4}, // Staircase 1 (Down)
+    {x: 4, y: 4}, {x: 5, y: 4}, {x: 6, y: 4}, {x: 7, y: 4}, // Floor 3 Corridor
+    {x: 7, y: 5}, {x: 7, y: 6}, {x: 7, y: 7}, // Staircase 2 (Down)
+    {x: 6, y: 7}, {x: 5, y: 7}, {x: 4, y: 7}, {x: 3, y: 7}, {x: 2, y: 7}, // Floor 2 Corridor
+    {x: 2, y: 8}, {x: 2, y: 9}, {x: 2, y: 10}, // Staircase 3 (Down)
+    {x: 3, y: 10}, {x: 4, y: 10}, {x: 5, y: 10}, {x: 6, y: 10}, {x: 7, y: 10}, {x: 8, y: 10}, {x: 9, y: 10} // Floor 1 Server Room
 ];
 
 // Helper to check if a grid cell is part of the path
@@ -50,9 +50,9 @@ const pixelPath = pathGrid.map(p => ({
 
 // Draw a beautiful metal JRPG staircase step (vertical) or corridor hallway carpet (horizontal)
 function drawCarpetPathTile(ctx, px, py, col, row) {
-    const isVerticalPath = (col === 3 && row >= 3 && row <= 6) || 
-                           (col === 7 && row >= 6 && row <= 10) || 
-                           (col === 2 && row >= 10 && row <= 14);
+    const isVerticalPath = (col === 3 && row >= 1 && row <= 4) || 
+                           (col === 7 && row >= 4 && row <= 7) || 
+                           (col === 2 && row >= 7 && row <= 10);
 
     if (tilesLoaded) {
         const tw = jrpgTiles.width / 4;
@@ -110,14 +110,14 @@ function drawCarpetPathTile(ctx, px, py, col, row) {
 
 // Draw raised concrete floor platforms and high-density server cabinets
 function drawOfficeFloorTile(ctx, px, py, col, row) {
-    // If it's the vertical wall transition rows (Row 4, 8, 12) and unoccupied, do nothing!
-    if (row === 4 || row === 8 || row === 12) {
+    // If it's the vertical wall transition rows (Row 2, 5, 8) and unoccupied, do nothing!
+    if (row === 2 || row === 5 || row === 8) {
         const isOccupied = (window.game && game.towers && game.towers.some(t => t.gx === col && t.gy === row)) || 
                            (window.game && game.obstacles && game.obstacles.some(ob => ob.x === col && ob.y === row));
         if (!isOccupied) return;
     }
 
-    const isWallRow = row === 0 || row === 5 || row === 9 || row === 13;
+    const isWallRow = row === 0 || row === 3 || row === 6 || row === 9;
 
     if (isWallRow) {
         if (row === 0) {
@@ -145,7 +145,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
                 ctx.stroke();
             }
         } 
-        else if (row === 5) {
+        else if (row === 3) {
             // Floor 3: Server Room Wall (Dark Blue-Grey with LEDs)
             ctx.fillStyle = '#2c3e50'; 
             ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -159,7 +159,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             ctx.fillStyle = !blink ? '#e74c3c' : '#c0392b'; // red LED
             ctx.fillRect(px + 22, py + 14, 2, 2);
         }
-        else if (row === 9) {
+        else if (row === 6) {
             // Floor 2: Meeting Room Wall (Clean White/Cream)
             ctx.fillStyle = '#f5f6fa'; 
             ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -181,7 +181,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
                 ctx.fillRect(px + 20, py + 20, 5, 3);
             }
         }
-        else if (row === 13) {
+        else if (row === 9) {
             // Floor 1: Overtime Dev Team Wall (Dim Midnight Blue)
             ctx.fillStyle = '#1e272e'; 
             ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -199,7 +199,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
         }
     } else {
         // Floor plank textures
-        if (row < 4) {
+        if (row < 3) {
             // Floor 4: IT Office Light Wood
             ctx.fillStyle = '#f2ddc6';
             ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -211,7 +211,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             ctx.moveTo(px, py + 32); ctx.lineTo(px + CELL_SIZE, py + 32);
             ctx.stroke();
         }
-        else if (row < 8) {
+        else if (row < 6) {
             // Floor 3: Server Room Cold Metal Plates
             ctx.fillStyle = '#57606f';
             ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -226,7 +226,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
             ctx.fillRect(px + 2, py + CELL_SIZE - 3.5, 1.5, 1.5);
             ctx.fillRect(px + CELL_SIZE - 3.5, py + CELL_SIZE - 3.5, 1.5, 1.5);
         }
-        else if (row < 12) {
+        else if (row < 9) {
             // Floor 2: Meeting Room Warm Mahogany Planks
             ctx.fillStyle = '#b77c57';
             ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
@@ -258,20 +258,20 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
     }
 
     // Platform bottom edge lip (3D depth)
-    if (row === 3 || row === 7 || row === 11 || row === 16) {
+    if (row === 2 || row === 5 || row === 8 || row === 11) {
         ctx.fillStyle = '#3c2517'; // Warm dark wood shadow edge
         ctx.fillRect(px, py + CELL_SIZE - 6, CELL_SIZE, 6);
     }
 
     // Draw Props on unoccupied non-wall cells
-    const isOccupied = (col === 1 && row === 2) || (col === 9 && row === 14) || isWallRow ||
+    const isOccupied = (col === 1 && row === 1) || (col === 9 && row === 10) || isWallRow ||
                        (window.game && game.towers && game.towers.some(t => t.gx === col && t.gy === row)) || 
                        (window.game && game.obstacles && game.obstacles.some(ob => ob.x === col && ob.y === row));
 
     if (!isOccupied) {
         ctx.save();
         
-        if (row < 4) {
+        if (row < 3) {
             // Floor 4: IT Office Props (Stool, table, plant)
             if ((col + row) % 3 === 0) {
                 // Round Pink Stool
@@ -301,7 +301,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
                 ctx.fill();
             }
         }
-        else if (row >= 5 && row < 8) {
+        else if (row >= 3 && row < 6) {
             // Floor 3: Server Room Props (Server Cabinets / Racks)
             if ((col + row) % 3 === 0) {
                 // High density server cabinet
@@ -324,7 +324,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
                 ctx.fillRect(px + 22, py + 12, 2, 2);
             }
         }
-        else if (row >= 9 && row < 12) {
+        else if (row >= 6 && row < 9) {
             // Floor 2: Meeting Room Props (Chairs, Tables, Notes)
             if ((col + row) % 3 === 1) {
                 // Long whiteboard table plank
@@ -341,7 +341,7 @@ function drawOfficeFloorTile(ctx, px, py, col, row) {
                 ctx.fillRect(px + 18, py + 10, 4, 5);
             }
         }
-        else if (row >= 13) {
+        else if (row >= 9) {
             // Floor 1: Night Overtime Dev Team Props (Pizza boxes, soda cans, coffee mugs, glowing monitor setups)
             if ((col + row) % 3 === 0) {
                 // Glowing Monitor Workstation
@@ -503,7 +503,8 @@ class Enemy {
     }
 
     initStats() {
-        const difficultyScale = 1.0 + (this.waveNum - 1) * 0.40;
+        const difficultyScale = 1.0 + (this.waveNum - 1) * 0.90;
+        const speedScale = 1.0 + (this.waveNum - 1) * 0.12;
         
         let hpMultiplier = 1.0;
         let speedMultiplier = 1.0;
@@ -519,7 +520,7 @@ class Enemy {
             case 'spec_adder': // Fast & weak (요구사항 변경)
                 this.name = '요구사항 변경';
                 this.maxHp = 50 * difficultyScale * hpMultiplier;
-                this.speed = 1.8 * speedMultiplier;
+                this.speed = 1.8 * speedScale * speedMultiplier;
                 this.gold = 10;
                 this.loc = 50;
                 this.color = '#f39c12';
@@ -528,7 +529,7 @@ class Enemy {
             case 'doc_bomber': // Hard armored (레거시 코드)
                 this.name = '레거시 코드';
                 this.maxHp = 180 * difficultyScale * hpMultiplier;
-                this.speed = 0.9 * speedMultiplier;
+                this.speed = 0.9 * speedScale * speedMultiplier;
                 this.gold = 25;
                 this.loc = 100;
                 this.color = '#95a5a6';
@@ -538,7 +539,7 @@ class Enemy {
             case 'urgent': // Very fast (긴급 장애)
                 this.name = '긴급 장애';
                 this.maxHp = 80 * difficultyScale * hpMultiplier;
-                this.speed = 2.5 * speedMultiplier;
+                this.speed = 2.5 * speedScale * speedMultiplier;
                 this.gold = 15;
                 this.loc = 80;
                 this.color = '#e74c3c';
@@ -547,7 +548,7 @@ class Enemy {
             case 'qa_bugger': // Debug/disable towers (QA 재오픈)
                 this.name = 'QA 재오픈';
                 this.maxHp = 220 * difficultyScale * hpMultiplier;
-                this.speed = 1.2 * speedMultiplier;
+                this.speed = 1.2 * speedScale * speedMultiplier;
                 this.gold = 30;
                 this.loc = 150;
                 this.color = '#3498db';
@@ -555,8 +556,8 @@ class Enemy {
                 break;
             case 'ceo_boss': // Big boss (운영 배포 사고)
                 this.name = '운영 배포 사고';
-                this.maxHp = 2000 * (1.0 + (this.waveNum - 5) * 0.8) * hpMultiplier;
-                this.speed = 0.6 * speedMultiplier;
+                this.maxHp = 3000 * (1.0 + (this.waveNum - 5) * 1.5) * hpMultiplier;
+                this.speed = 0.6 * speedScale * speedMultiplier;
                 this.gold = 300;
                 this.loc = 500;
                 this.color = '#eb3b5a';
@@ -582,12 +583,12 @@ class Enemy {
             return; // Can't move while stunned
         }
 
-        // Special behavior: QA Client spawns bug reports to freeze towers
-        if (this.type === 'qa_bugger') {
+        // Special behavior: QA Client / Outage Boss spawns bug reports to freeze towers
+        if (this.type === 'qa_bugger' || this.type === 'ceo_boss') {
             this.bugCooldown -= dt;
             if (this.bugCooldown <= 0) {
                 this.fireBugReport();
-                this.bugCooldown = 4000 + Math.random() * 2000;
+                this.bugCooldown = (this.type === 'ceo_boss' ? 1500 : 3000) + Math.random() * 1500;
             }
         }
 
@@ -691,10 +692,15 @@ class Enemy {
                 ctx.stroke();
 
                 // Warning / Addition symbol (+ symbol inside circle)
+                ctx.save();
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#e67e22';
                 ctx.fillStyle = '#e67e22';
                 ctx.beginPath();
                 ctx.arc(this.x + 6, this.y + 6 + bob, 4, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.restore();
+
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
@@ -722,11 +728,15 @@ class Enemy {
                 ctx.moveTo(this.x + 6, this.y + 8 + bob);  ctx.lineTo(this.x + 10, this.y + 2 + bob);
                 ctx.stroke();
 
-                // Red 'LEGACY' text
+                // Red 'LEGACY' text with glowing shadow
+                ctx.save();
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#ff7675';
                 ctx.fillStyle = '#ff7675';
                 ctx.font = 'bold 8px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('LEGACY', this.x, this.y + 4 + bob);
+                ctx.restore();
                 ctx.restore();
             }
             else if (this.type === 'urgent') {
@@ -805,11 +815,15 @@ class Enemy {
                 ctx.stroke();
 
                 // Glowing green eyes
+                ctx.save();
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#2ecc71';
                 ctx.fillStyle = '#2ecc71';
                 ctx.beginPath();
                 ctx.arc(this.x - 1.5, this.y - 7.5 + bob, 1.2, 0, Math.PI * 2);
                 ctx.arc(this.x + 1.5, this.y - 7.5 + bob, 1.2, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.restore();
                 ctx.restore();
             }
             else if (this.type === 'ceo_boss') {
@@ -840,12 +854,16 @@ class Enemy {
                     ctx.fillStyle = '#2f3542'; // reset for next shelf background
                 }
 
-                // Center screen warning message 'CRITICAL OUTAGE'
-                ctx.fillStyle = 'rgba(235, 59, 90, 0.15)';
+                // Center screen warning message 'CRITICAL OUTAGE' with hot red glow
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#eb3b5a';
+                ctx.fillStyle = 'rgba(235, 59, 90, 0.25)';
                 ctx.fillRect(this.x - 14, this.y - 3 + bob, 28, 9);
                 ctx.strokeStyle = '#eb3b5a';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 1.5;
                 ctx.strokeRect(this.x - 14, this.y - 3 + bob, 28, 9);
+                ctx.restore();
                 
                 ctx.fillStyle = '#ff7675';
                 ctx.font = 'bold 5px monospace';
@@ -1391,9 +1409,16 @@ class Tower {
                 ctx.fill();
                 ctx.stroke();
 
+                // Add RGB backglow!
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = ['#ff007f', '#00ecc6', '#39ff14', '#ffff00'][Math.floor(Date.now() / 300) % 4];
+                ctx.strokeStyle = ctx.shadowColor;
+                ctx.stroke();
+
                 // Draw miniature keycaps (grid of dots or small blocks)
-                const keyColors = ['#00f0ff', '#ff7675', '#ffffff', '#2ecc71', '#ffa502'];
+                const keyColors = ['#00f0ff', '#ff8fa3', '#ffffff', '#2ecc71', '#e5c290'];
                 ctx.lineWidth = 0.8;
+                ctx.shadowBlur = 0; // turn off shadow for tiny caps
                 for (let rowIdx = 0; rowIdx < 3; rowIdx++) {
                     for (let colIdx = 0; colIdx < 5; colIdx++) {
                         const kx = this.x - 12 + colIdx * 5.5;
@@ -1432,7 +1457,15 @@ class Tower {
                 ctx.fill();
                 ctx.stroke();
 
+                // Add gaming neon glow!
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#39ff14'; // neon green glow
+                ctx.strokeStyle = '#39ff14';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
                 // Split click lines
+                ctx.shadowBlur = 0;
                 ctx.strokeStyle = '#57606f';
                 ctx.lineWidth = 1.2;
                 ctx.beginPath();
@@ -1475,12 +1508,15 @@ class Tower {
                 ctx.lineTo(this.x + 15, this.y + bob);
                 ctx.stroke();
 
-                // Flashing status lights (LEDs)
+                // Flashing status lights (LEDs) with glowing shadow!
                 const blink = Math.floor(Date.now() / 300) % 2 === 0;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = blink ? '#2ecc71' : '#e74c3c';
                 ctx.fillStyle = blink ? '#2ecc71' : '#27ae60'; // green LED
                 ctx.fillRect(this.x - 11, this.y - 8 + bob, 2.5, 2.5);
                 ctx.fillStyle = !blink ? '#e74c3c' : '#c0392b'; // red LED
                 ctx.fillRect(this.x - 11, this.y + 4 + bob, 2.5, 2.5);
+                ctx.shadowBlur = 0;
 
                 // Hard drive slot slots
                 ctx.fillStyle = '#1e272e';
@@ -1493,7 +1529,9 @@ class Tower {
                 ctx.strokeStyle = '#57606f';
                 ctx.strokeRect(this.x + 1, this.y - 8 + bob, 11, 18);
 
-                // Matrix green code mock lines
+                // Matrix green code mock lines with slight green glow
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = '#00ecc6';
                 ctx.fillStyle = '#00ecc6';
                 ctx.fillRect(this.x + 3, this.y - 5 + bob, 7, 1);
                 ctx.fillRect(this.x + 3, this.y - 2 + bob, 5, 1);
@@ -1519,30 +1557,39 @@ class Tower {
                 ctx.textAlign = 'center';
                 ctx.fillText('JENKINS', this.x, this.y - 8 + bob);
 
-                // Blinking build stage circles (Red, Orange, Green)
+                // Blinking build stage circles (Red, Orange, Green) with glows!
                 const pulse = Math.abs(Math.sin(Date.now() / 250)) * 0.4 + 0.6;
+                ctx.shadowBlur = 5;
                 
                 // Top circle: Blue/Green (success)
+                ctx.shadowColor = '#2ecc71';
                 ctx.fillStyle = `rgba(46, 204, 113, ${pulse})`;
                 ctx.beginPath();
                 ctx.arc(this.x - 6, this.y + 2 + bob, 3, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.shadowBlur = 0;
                 ctx.strokeStyle = '#2f3542';
                 ctx.stroke();
 
                 // Middle circle: Orange (building)
                 const orangePulse = Math.floor(Date.now() / 200) % 2 === 0 ? 1.0 : 0.4;
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#f1c405';
                 ctx.fillStyle = `rgba(241, 196, 15, ${orangePulse})`;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y + 2 + bob, 3, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.shadowBlur = 0;
                 ctx.stroke();
 
                 // Bottom circle: Red (failed build)
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#ff7675';
                 ctx.fillStyle = '#ff7675';
                 ctx.beginPath();
                 ctx.arc(this.x + 6, this.y + 2 + bob, 3, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.shadowBlur = 0;
                 ctx.stroke();
 
                 // Pipeline link lines
@@ -1574,10 +1621,12 @@ class Tower {
                 ctx.stroke();
 
                 // Floating hologram orb aura
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#00f0ff';
                 const pulse = Math.abs(Math.sin(Date.now() / 300)) * 8 + 10;
                 const auraGrad = ctx.createRadialGradient(this.x, this.y - 6 + bob, 1, this.x, this.y - 6 + bob, pulse);
-                auraGrad.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
-                auraGrad.addColorStop(0.5, 'rgba(0, 240, 255, 0.15)');
+                auraGrad.addColorStop(0, 'rgba(0, 240, 255, 0.55)');
+                auraGrad.addColorStop(0.5, 'rgba(0, 240, 255, 0.20)');
                 auraGrad.addColorStop(1, 'rgba(0, 240, 255, 0)');
                 ctx.fillStyle = auraGrad;
                 ctx.beginPath();
@@ -1616,10 +1665,11 @@ class Tower {
                 ctx.strokeStyle = '#1b3a4b';
                 ctx.lineWidth = 1.5;
 
+                // Stacked database cylinders with neon glow
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#0a9396';
                 for (let i = 0; i < 3; i++) {
                     const cyy = this.y - 10 + i * 8 + bob;
-                    
-                    // Cylinder shadow/underglow
                     ctx.fillStyle = '#0a9396'; // PostgreSQL blue
                     ctx.beginPath();
                     ctx.roundRect(this.x - dbW / 2, cyy, dbW, dbH, 2);
@@ -1637,6 +1687,7 @@ class Tower {
                 }
 
                 // Styled blue database query connector cables on side
+                ctx.shadowBlur = 0;
                 ctx.strokeStyle = '#94d2bd';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
@@ -1731,6 +1782,21 @@ class Projectile {
         } else {
             this.x += (dx / dist) * moveStep;
             this.y += (dy / dist) * moveStep;
+
+            if (Math.random() < 0.25) {
+                game.particles.push({
+                    type: 'binary_trail',
+                    x: this.x,
+                    y: this.y,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                    color: this.type === 'bug_report' ? '#ff7675' : '#00ecc6',
+                    size: 2,
+                    char: Math.random() < 0.5 ? '0' : '1',
+                    life: 0.4,
+                    maxLife: 0.4
+                });
+            }
         }
     }
 
@@ -1968,7 +2034,7 @@ const game = {
         this.updateClock();
         this.clockInterval = setInterval(() => this.updateClock(), 1000);
 
-        this.showDialog("하이하이! 초롱이의 코지 캣 오피스 디펜스에 온 걸 환영한데이! 커피 수혈을 방해하는 귀여운 고양이 빌런들을 아군 냥이 영웅들과 함께 조져뿌자! [▶ START WAVE] 눌러주레이!", "excited");
+        this.showDialog("어익후! 부장님이 오늘 기어이 실배포 하라고 WBS 스프린트 일정을 앞당기셨습니데이! 쏟아지는 요구사항 변경이랑 긴급 버그 티켓들을 아군 장비랑 서버들을 동원해서 방어해 보입시다! [▶ START SPRINT] 눌러서 긴급 핫픽스 롤아웃 시작하입시더!", "excited");
     },
 
     drawShopIcons() {
@@ -2193,8 +2259,13 @@ const game = {
         if (camImg) {
             camImg.src = `chorong_${emotion}.png`;
         }
+        const dialogAvatar = document.getElementById('dialog-avatar');
+        if (dialogAvatar) {
+            dialogAvatar.src = `chorong_${emotion}.png`;
+        }
         
         if (this.dialogInterval) clearInterval(this.dialogInterval);
+        if (this.dialogTimeout) clearTimeout(this.dialogTimeout);
         
         let index = 0;
         this.dialogInterval = setInterval(() => {
@@ -2203,11 +2274,19 @@ const game = {
                 index++;
             } else {
                 clearInterval(this.dialogInterval);
+                this.dialogTimeout = setTimeout(() => {
+                    dialogBox.classList.add('hidden');
+                }, 5000);
             }
         }, 25);
     },
 
     resetGame() {
+        if (this.dialogInterval) clearInterval(this.dialogInterval);
+        if (this.dialogTimeout) clearTimeout(this.dialogTimeout);
+        const dialogBox = document.getElementById('jrpg-dialog-box');
+        if (dialogBox) dialogBox.classList.add('hidden');
+
         this.budget = 150;
         this.loc = 0;
         this.hp = 100;
@@ -2272,14 +2351,14 @@ const game = {
             const gy = Math.floor(Math.random() * GRID_ROWS);
             
             // Check wall rows
-            if (gy === 4 || gy === 8 || gy === 12) continue;
+            if (gy === 2 || gy === 5 || gy === 8) continue;
             
             // Check path conflict
             if (isPathCell(gx, gy)) continue;
             
             // Check start/end desks
-            if (gx === 1 && gy === 2) continue;
-            if (gx === 9 && gy === 14) continue;
+            if (gx === 1 && gy === 1) continue;
+            if (gx === 9 && gy === 10) continue;
             
             // Check duplicate
             if (this.obstacles.some(ob => ob.x === gx && ob.y === gy)) continue;
@@ -2341,11 +2420,50 @@ const game = {
             } catch (err) {
                 console.warn("Sound initialization deferred: ", err);
             }
-            document.getElementById('start-screen').classList.remove('active');
-            document.getElementById('game-screen').classList.add('active');
+            const startScreen = document.getElementById('start-screen');
+            const bootScreen = document.getElementById('boot-terminal-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const bootText = document.getElementById('boot-terminal-text');
+
+            startScreen.classList.remove('active');
+            bootScreen.style.display = 'flex';
+            bootScreen.classList.add('active');
+
             try {
                 Sound.playBuild();
             } catch (err) {}
+
+            const logs = [
+                "> $ npm run deploy:overtime-hell",
+                "[SYSTEM] Booting IT Defense Environment v1.0.9...",
+                "[SYSTEM] Caching global dependencies: node_modules... OK",
+                "[SYSTEM] Connecting database postgresql://localhost:5432... OK",
+                "[SYSTEM] Starting local microservices: keycap-router... OK",
+                "[WARNING] 42 compilation bugs detected in Legacy Code!",
+                "[WARNING] Scheduled out-of-bounds PM Ticket: Requirements Change",
+                "[JIRA] Assigned Sprint 1 Ticket: Hotfix Rollout",
+                "[SYSTEM] STARTING SPRINT DEPLOYMENT PROMPT...",
+                "--------------------------------------------------",
+                "PM: \"초롱 씨, 오늘 내로 핫픽스 실배포 못 하면 우리 다 퇴근 없어욧!!!\"",
+                "--------------------------------------------------"
+            ];
+
+            bootText.innerText = '';
+            let lineIdx = 0;
+            const printLine = () => {
+                if (lineIdx < logs.length) {
+                    bootText.innerText += logs[lineIdx] + '\n';
+                    lineIdx++;
+                    setTimeout(printLine, 180);
+                } else {
+                    setTimeout(() => {
+                        bootScreen.classList.remove('active');
+                        bootScreen.style.display = 'none';
+                        gameScreen.classList.add('active');
+                    }, 500);
+                }
+            };
+            printLine();
         });
 
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
@@ -2474,9 +2592,9 @@ const game = {
     },
 
     tryBuildTower(type, gx, gy) {
-        const isStart = gx === 1 && gy === 2;
-        const isEnd = gx === 9 && gy === 14;
-        const isWallRow = gy === 4 || gy === 8 || gy === 12;
+        const isStart = gx === 1 && gy === 1;
+        const isEnd = gx === 9 && gy === 10;
+        const isWallRow = gy === 2 || gy === 5 || gy === 8;
         const hasObstacle = this.obstacles.some(ob => ob.x === gx && ob.y === gy);
 
         if (isStart || isEnd || hasObstacle) {
@@ -2593,6 +2711,53 @@ const game = {
         }
     },
 
+    triggerSprintBannerAnimation(waveNum) {
+        const overlay = document.getElementById('sprint-banner-overlay');
+        const title = document.getElementById('sprint-banner-title');
+        const sub = document.getElementById('sprint-banner-sub');
+        const desc = document.getElementById('sprint-banner-desc');
+        
+        if (!overlay || !title || !sub || !desc) return;
+        
+        const sprintTitles = [
+            "SPRINT 1",
+            "SPRINT 2",
+            "SPRINT 3",
+            "SPRINT 4",
+            "SPRINT 5"
+        ];
+        
+        const sprintSubs = [
+            "HOTFIX ROLLOUT",
+            "LEGACY REFACTORING",
+            "SECURITY AUDIT COMPLIANCE",
+            "SCHEDULE COMPRESSION",
+            "PRODUCTION DEPLOY RELEASE"
+        ];
+        
+        const sprintDescs = [
+            "부서진 긴급 핫픽스들을 배포하여 시스템을 안정화하세요!",
+            "오래된 스파게티 레거시 코드를 리팩토링하고 장애를 막으세요!",
+            "감사원들이 들이닥칩니다! (적들의 체력 및 방어력 +30% 버프)",
+            "일정 마감이 임박했습니다! (적들의 이동속도가 +25% 빨라집니다)",
+            "최종 릴리즈! 거대 Outage 서버 장애 보스를 파괴하고 탈출하세요!"
+        ];
+        
+        title.innerText = sprintTitles[waveNum - 1] || "SPRINT " + waveNum;
+        sub.innerText = sprintSubs[waveNum - 1] || "INCOMING TASKS";
+        desc.innerText = sprintDescs[waveNum - 1] || "방어막 가동!";
+        
+        overlay.classList.remove('hidden');
+        overlay.classList.add('active');
+        
+        this.screenShake = 15;
+        
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            overlay.classList.add('hidden');
+        }, 2200);
+    },
+
     startNextWave() {
         if (this.waveActive) return;
 
@@ -2605,6 +2770,8 @@ const game = {
         this.waveActive = true;
         this.enemies = [];
         this.projectiles = [];
+        
+        this.triggerSprintBannerAnimation(this.currentWave);
         
         this.log(`[WBS START] ${this.currentWave}단계: ${this.wbsStages[this.currentWave - 1]} 시작!`);
         Sound.playWaveStart();
@@ -2633,32 +2800,34 @@ const game = {
     getWaveConfig(waveNum) {
         const list = [];
         if (waveNum === 1) {
-            // Wave 1: 18 hoodie cats (dense and fast)
-            for (let i = 0; i < 18; i++) list.push({ type: 'spec_adder', delay: 1000 + i * 700 });
+            // Wave 1: 25 spec_adder (dense and fast)
+            for (let i = 0; i < 25; i++) list.push({ type: 'spec_adder', delay: 1000 + i * 400 });
         } 
         else if (waveNum === 2) {
-            // Wave 2: 12 hoodie cats + 12 shield cats
-            for (let i = 0; i < 12; i++) list.push({ type: 'spec_adder', delay: 1000 + i * 600 });
-            for (let i = 0; i < 12; i++) list.push({ type: 'doc_bomber', delay: 3000 + i * 900 });
+            // Wave 2: 18 spec_adder + 15 doc_bombers
+            for (let i = 0; i < 18; i++) list.push({ type: 'spec_adder', delay: 1000 + i * 400 });
+            for (let i = 0; i < 15; i++) list.push({ type: 'doc_bomber', delay: 2000 + i * 600 });
         } 
         else if (waveNum === 3) {
-            // Wave 3: 16 hoodie cats + 16 ASAP runners
-            for (let i = 0; i < 16; i++) list.push({ type: 'spec_adder', delay: 500 + i * 500 });
-            for (let i = 0; i < 16; i++) list.push({ type: 'urgent', delay: 2000 + i * 600 });
+            // Wave 3: 20 spec_adder + 20 urgent + 12 qa_buggers
+            for (let i = 0; i < 20; i++) list.push({ type: 'spec_adder', delay: 500 + i * 350 });
+            for (let i = 0; i < 20; i++) list.push({ type: 'urgent', delay: 1200 + i * 400 });
+            for (let i = 0; i < 12; i++) list.push({ type: 'qa_bugger', delay: 1500 + i * 500 });
         } 
         else if (waveNum === 4) {
-            // Wave 4: 12 shield cats + 15 shamans + 12 ASAP runners
-            for (let i = 0; i < 12; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 800 });
-            for (let i = 0; i < 15; i++) list.push({ type: 'qa_bugger', delay: 1500 + i * 1000 });
-            for (let i = 0; i < 12; i++) list.push({ type: 'urgent', delay: 2000 + i * 700 });
+            // Wave 4: 18 doc_bombers + 20 qa_buggers + 20 urgent
+            for (let i = 0; i < 18; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 500 });
+            for (let i = 0; i < 20; i++) list.push({ type: 'qa_bugger', delay: 1200 + i * 600 });
+            for (let i = 0; i < 20; i++) list.push({ type: 'urgent', delay: 1500 + i * 450 });
         } 
         else if (waveNum === 5) {
-            // Wave 5: 12 shield cats + 12 shamans + 12 ASAP runners + 2 boss dragon cats!
-            for (let i = 0; i < 12; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 700 });
-            for (let i = 0; i < 12; i++) list.push({ type: 'qa_bugger', delay: 1500 + i * 800 });
-            for (let i = 0; i < 12; i++) list.push({ type: 'urgent', delay: 2000 + i * 600 });
+            // Wave 5: 22 doc_bombers + 22 qa_buggers + 22 urgent + 3 Outage Bosses!
+            for (let i = 0; i < 22; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 500 });
+            for (let i = 0; i < 22; i++) list.push({ type: 'qa_bugger', delay: 1200 + i * 500 });
+            for (let i = 0; i < 22; i++) list.push({ type: 'urgent', delay: 1500 + i * 400 });
             list.push({ type: 'ceo_boss', delay: 8000 });
             list.push({ type: 'ceo_boss', delay: 14000 });
+            list.push({ type: 'ceo_boss', delay: 20000 });
         }
         return list;
     },
@@ -2866,9 +3035,9 @@ const game = {
 
             for (let col = 0; col < GRID_COLS; col++) {
                 for (let row = 0; row < GRID_ROWS; row++) {
-                    const isStart = col === 1 && row === 2;
-                    const isEnd = col === 9 && row === 14;
-                    const isWallRow = row === 4 || row === 8 || row === 12;
+                    const isStart = col === 1 && row === 1;
+                    const isEnd = col === 9 && row === 10;
+                    const isWallRow = row === 2 || row === 5 || row === 8;
                     const hasObstacle = this.obstacles.some(ob => ob.x === col && ob.y === row);
                     const hasTower = this.towers.some(t => t.gx === col && t.gy === row);
                     const onPath = isPathCell(col, row);
@@ -3311,6 +3480,13 @@ const game = {
                 this.ctx.arc(p.x, p.y, p.radius * ratio, 0, Math.PI * 2);
                 this.ctx.stroke();
             }
+            else if (p.type === 'binary_trail') {
+                this.ctx.fillStyle = p.color;
+                this.ctx.font = '8px monospace';
+                this.ctx.globalAlpha = p.life / p.maxLife;
+                this.ctx.fillText(p.char, p.x, p.y);
+                this.ctx.globalAlpha = 1.0;
+            }
             else {
                 this.ctx.fillStyle = p.color;
                 const size = Math.max(1, p.size * (p.life / p.maxLife));
@@ -3339,9 +3515,9 @@ const game = {
         const px = gx * CELL_SIZE;
         const py = gy * CELL_SIZE;
 
-        const isStart = gx === 1 && gy === 2;
-        const isEnd = gx === 9 && gy === 14;
-        const isWallRow = gy === 4 || gy === 8 || gy === 12;
+        const isStart = gx === 1 && gy === 1;
+        const isEnd = gx === 9 && gy === 10;
+        const isWallRow = gy === 2 || gy === 5 || gy === 8;
         const onPath = isPathCell(gx, gy);
         const hasObstacle = this.obstacles.some(ob => ob.x === gx && ob.y === gy);
 
