@@ -1,0 +1,17 @@
+{
+  "name": "chorong-office-defense",
+  "version": "1.0.0",
+  "description": "IT Developer's Defense Game - Chorong's Office Defense",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 8080 -o"
+  },
+  "keywords": [
+    "game",
+    "defense",
+    "developer",
+    "retro"
+  ],
+  "author": "Chorong Dev Studio",
+  "license": "ISC"
+}

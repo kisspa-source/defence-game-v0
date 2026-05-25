@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초롱이의 개발지옥 디펜스: IT Project Hell</title>
+    <!-- Google Fonts for Retro Style -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Scanlines overlay for CRT monitor look -->
+    <div class="crt-scanlines"></div>
+
+    <div class="phone-wrapper">
+        <div class="phone-buttons volume-up"></div>
+        <div class="phone-buttons volume-down"></div>
+        <div class="phone-buttons power"></div>
+        <div class="phone-screen">
+            <!-- Start Screen -->
+            <div id="start-screen" class="screen active">
+                <div class="terminal-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                    <span class="terminal-title">project_hell_deploy_final.sh</span>
+                </div>
+                <div class="title-logo">
+                    <h1 class="glitch-text" data-text="CHORONG'S">CHORONG'S</h1>
+                    <h2 class="sub-logo">DEV PROJECT HELL</h2>
+                    <p class="tagline">IT 개발 프로젝트 장애 방어전</p>
+                </div>
+                <div class="story-box">
+                    <p class="story-line">> $ npm run start:overtime-hell</p>
+                    <p class="story-text">
+                        주인공 <span class="highlight">초롱이</span>는 배포 일정이 꼬인 개발 지옥 속에서 끝없이 터지는 긴급 장애와 요구사항 변경에 맞서 싸우는 PM 겸 개발자입니다.<br>
+                        개발 장비와 CI/CD 서버들을 배치하여 다가오는 개발 지옥의 태스크 위협을 방어하고 성공적으로 서비스를 배포하세요!
+                    </p>
+                </div>
+                <button id="btn-start" class="btn btn-primary">개발 시작하기 (Start)</button>
+                <div class="start-footer">
+                    <p>© 2026 Chorong Dev Studio. Press to play.</p>
+                </div>
+            </div>
+
+            <!-- Main Game Screen -->
+            <div id="game-screen" class="screen">
+                <!-- Top Header Status Bar -->
+                <div class="phone-header">
+                    <div class="header-row">
+                        <div class="header-coin-box">
+                            <span class="coin-icon">🪙</span>
+                            <span id="hud-budget" class="coin-text">150</span>
+                        </div>
+                        <div class="header-diamond-box">
+                            <span class="diamond-icon">💻</span>
+                            <span id="hud-loc" class="diamond-text">00</span>
+                        </div>
+                        <div class="header-wave-box">
+                            <span id="hud-wave-num" class="wave-text">Sprint 1/5</span>
+                        </div>
+                    </div>
+                    <div class="header-row bottom-row">
+                        <div class="header-title">
+                            <button id="btn-coffee" class="coffee-btn">☕ 커피 수혈 (30G)</button>
+                        </div>
+                        <div class="header-time-box">
+                            <canvas id="clock-canvas" width="22" height="22"></canvas>
+                        </div>
+                        <div class="header-settings">
+                            <button id="btn-audio-toggle" class="header-btn">🔊</button>
+                            <button id="btn-restart" class="header-btn">🔄</button>
+                        </div>
+                    </div>
+                    <!-- Thin red stress HP bar representing Chorong's Mental HP (Developer Stress) -->
+                    <div class="phone-hp-container">
+                        <div id="hud-hp-bar" class="phone-hp-bar" style="width: 100%;"></div>
+                        <div class="hp-label">DEVELOPER MENTAL (STRESS)</div>
+                    </div>
+                </div>
+
+                <!-- Central Game Canvas & Dialog Box Area -->
+                <div class="canvas-area">
+                    <canvas id="game-canvas" width="440" height="680"></canvas>
+
+                    <!-- Slack/Jira Style Dialogue Box Overlay -->
+                    <div id="jrpg-dialog-box" class="jrpg-dialog hidden">
+                        <div class="dialog-text" id="dialog-text">로그 메시지 로딩 중...</div>
+                        <div class="dialog-arrow">▼</div>
+                    </div>
+
+                    <!-- Streamer Cam Overlay (Right-Middle) -->
+                    <div class="streamer-overlay">
+                        <div class="streamer-cam">
+                            <img src="chorong_vtuber.png" alt="Chorong Cam" class="cam-img">
+                            <div class="live-badge">🔴 LIVE</div>
+                            <div class="viewer-count">123K VIEWERS</div>
+                            <div class="streamer-title">GAME DEV CHORONG</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shop Section Footer -->
+                <div class="shop-bar">
+                    <div class="shop-title">DEV STACKS</div>
+                    <!-- Next Wave Button inside Shop Bar -->
+                    <button id="btn-next-wave" class="btn-next-wave">
+                        <span>▶ START SPRINT</span>
+                    </button>
+                </div>
+
+                <!-- Shop Grid -->
+                <div class="shop-grid">
+                    <div class="shop-item" data-tower="keyboard">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-keyboard" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">Keyboard</span>
+                            <span class="item-cost">50G</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-tower="mouse">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-mouse" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">Mouse</span>
+                            <span class="item-cost">40G</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-tower="laptop">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-laptop" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">IDE Server</span>
+                            <span class="item-cost">100G</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-tower="iphone">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-iphone" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">Jenkins CI</span>
+                            <span class="item-cost">80G</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-tower="headset">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-headset" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">AI Assistant</span>
+                            <span class="item-cost">60G</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-tower="coffee">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-coffee" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">Postgres DB</span>
+                            <span class="item-cost">30G</span>
+                        </div>
+                    </div>
+                    <div class="shop-item" data-tower="snack">
+                        <div class="shop-item-card">
+                            <div class="item-icon-container">
+                                <canvas id="icon-snack" width="36" height="36"></canvas>
+                            </div>
+                            <span class="item-name">Snack Block</span>
+                            <span class="item-cost">25G</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info/Upgrade panel (from styles.css) -->
+                <div id="tower-info-panel" class="info-panel hidden">
+                    <div class="panel-header">장비 성능 튜닝</div>
+                    <div class="info-body">
+                        <div id="selected-tower-name" class="tower-title">Keyboard (Level 1)</div>
+                        <div class="info-stats">
+                            <div class="stat-row">
+                                <span>공격력:</span>
+                                <span id="stat-damage">-</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>공격속도:</span>
+                                <span id="stat-speed">-</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>커버리지:</span>
+                                <span id="stat-range">-</span>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button id="btn-upgrade-tower" class="btn btn-primary">강화하기 (0G)</button>
+                            <button id="btn-sell-tower" class="btn" style="background-color: var(--danger); color: #fff;">회수하기 (0G)</button>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- /game-screen -->
+
+            <!-- Tech upgrade modal -->
+            <div id="tech-modal" class="modal-overlay hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>R&D 기술 세미나 (Passives)</h2>
+                        <p>프로젝트 지옥에서 살아남을 빌드 플러그인을 활성화하세요!</p>
+                    </div>
+                    <div id="tech-cards" class="card-grid">
+                        <!-- Dynamic tech cards go here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over modal -->
+            <div id="gameover-modal" class="modal-overlay hidden">
+                <div class="modal-content game-over-content">
+                    <div class="modal-header">
+                        <h2>PROJECT FAILED (서버 다운)</h2>
+                        <p>초롱이 님이 쏟아지는 버그와 요구사항 과부하로 기절했습니다.</p>
+                    </div>
+                    <div class="skull-icon">💀</div>
+                    <div class="result-message">
+                        정신적 멘탈 HP가 0%가 되어 번아웃이 발생했습니다.<br>
+                        서버와 장비를 효율적으로 튜닝하여 WBS 일정을 수호하세요!
+                    </div>
+                    <button id="btn-retry" class="btn btn-primary">서버 재부팅 (Retry)</button>
+                </div>
+            </div>
+
+            <!-- Game Clear modal -->
+            <div id="gameclear-modal" class="modal-overlay hidden">
+                <div class="modal-content game-clear-content">
+                    <div class="modal-header">
+                        <h2>PROJECT COMPLETED!</h2>
+                        <p>실배포 완료! 무사히 동접 100만 서비스를 정상 론칭했습니다!</p>
+                    </div>
+                    <div class="trophy-icon">🏆</div>
+                    <div class="result-message">
+                        급작스런 운영 사고와 기습적인 보안 감사 등의 위협을 뚫고<br>
+                        무사히 프로젝트 배포 마감일을 맞췄습니다. 수고하셨습니다!
+                    </div>
+                    <button id="btn-clear-restart" class="btn btn-primary">새 프로젝트 시작 (Restart)</button>
+                </div>
+            </div>
+
+        </div> <!-- /phone-screen -->
+    </div> <!-- /phone-wrapper -->
+
+    <!-- Scripts -->
+    <script src="sound.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
