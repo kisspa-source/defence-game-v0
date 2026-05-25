@@ -3577,6 +3577,12 @@ const game = {
         document.getElementById('btn-retry').addEventListener('click', () => this.resetGame());
         document.getElementById('btn-clear-restart').addEventListener('click', () => this.resetGame());
 
+        document.getElementById('jrpg-dialog-box').addEventListener('click', () => {
+            if (this.dialogInterval) clearInterval(this.dialogInterval);
+            if (this.dialogTimeout) clearTimeout(this.dialogTimeout);
+            document.getElementById('jrpg-dialog-box').classList.add('hidden');
+        });
+
         document.getElementById('btn-start').addEventListener('click', () => {
             try {
                 Sound.init();

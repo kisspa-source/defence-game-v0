@@ -431,7 +431,8 @@ body {
     font-size: 12px;
     line-height: 1.6;
     color: #ffffff;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
