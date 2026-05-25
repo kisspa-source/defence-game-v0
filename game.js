@@ -591,6 +591,33 @@ class Enemy {
                 this.color = '#3498db';
                 this.phrase = '스테이징에서 재현되는데요?';
                 break;
+            case 'unit_test': // High health, slow (단위테스트 실패)
+                this.name = '단위테스트 실패';
+                this.maxHp = 130 * difficultyScale * hpMultiplier;
+                this.speed = 1.0 * speedScale * speedMultiplier;
+                this.gold = 20;
+                this.loc = 90;
+                this.color = '#ff6b6b';
+                this.phrase = ['Assertion Failed!', '코드 커버리지 미달!', '테스트 케이스 깨짐!'][Math.floor(Math.random() * 3)];
+                break;
+            case 'meeting': // Balanced (끝없는 업무회의)
+                this.name = '끝없는 업무회의';
+                this.maxHp = 160 * difficultyScale * hpMultiplier;
+                this.speed = 1.3 * speedScale * speedMultiplier;
+                this.gold = 25;
+                this.loc = 110;
+                this.color = '#a55eea';
+                this.phrase = ['잠깐 회의 좀 하실까요?', '싱크업 미팅 잡겠습니다', '10분만 대화하시죠'][Math.floor(Math.random() * 3)];
+                break;
+            case 'biz_user': // Fast (현업 요구/독촉)
+                this.name = '현업 요구/독촉';
+                this.maxHp = 90 * difficultyScale * hpMultiplier;
+                this.speed = 2.1 * speedScale * speedMultiplier;
+                this.gold = 18;
+                this.loc = 85;
+                this.color = '#fa8231';
+                this.phrase = ['언제 배포되나요?', '이거 급한 건입니다!', '오늘 중으로 부탁해요!'][Math.floor(Math.random() * 3)];
+                break;
             case 'ceo_boss': // Big boss (운영 배포 사고)
                 this.name = '운영 배포 사고';
                 this.maxHp = 3000 * (1.0 + (this.waveNum - 5) * 1.5) * hpMultiplier;
@@ -940,6 +967,177 @@ class Enemy {
                 drawLegSegment(this.x + (isLeft ? -4 : 4), this.y + bob, kneeX, kneeY);
                 drawLegSegment(kneeX, kneeY, footX, footY);
             }
+        }
+        else if (this.type === 'unit_test') {
+            // 단위테스트 실패: 3D rotating warning cube with FAIL text
+            const R = 12;
+            const pts3d = [
+                { x: -R, y: -R, z: -R }, { x: R, y: -R, z: -R }, { x: R, y: -R, z: R }, { x: -R, y: -R, z: R },
+                { x: -R, y: R, z: -R }, { x: R, y: R, z: -R }, { x: R, y: R, z: R }, { x: -R, y: R, z: R }
+            ];
+            const rotX = Date.now() / 350;
+            const rotY = Date.now() / 250;
+            const rotated = pts3d.map(v => {
+                let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                return { x: x1, y: y2, z: z2 };
+            });
+            const proj = rotated.map(r => {
+                const dist = 120;
+                const scale = 1.0 / (1.0 + r.z / dist);
+                return { x: this.x + r.x * scale, y: this.y + bob + r.y * scale };
+            });
+
+            const cubeFaces = [
+                { idxs: [3, 2, 6, 7], norm: { x: 0, y: 0, z: 1 } },  // front
+                { idxs: [7, 6, 5, 4], norm: { x: 0, y: -1, z: 0 } }, // top
+                { idxs: [0, 3, 7, 4], norm: { x: -1, y: 0, z: 0 } }, // left
+                { idxs: [2, 1, 5, 6], norm: { x: 1, y: 0, z: 0 } },  // right
+                { idxs: [1, 0, 4, 5], norm: { x: 0, y: 0, z: -1 } }, // back
+                { idxs: [0, 1, 2, 3], norm: { x: 0, y: 1, z: 0 } }   // bottom
+            ];
+
+            cubeFaces.forEach(f => {
+                const rotatedFacePts = f.idxs.map(idx => rotated[idx]);
+                const norm = getNormal(rotatedFacePts[0], rotatedFacePts[1], rotatedFacePts[2]);
+                if (norm.z > 0) {
+                    const drawPts = f.idxs.map(idx => proj[idx]);
+                    drawLowPolyFacet(ctx, drawPts, norm, '#ff6b6b');
+                }
+            });
+
+            // "FAIL" warning text in the center
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('FAIL', this.x, this.y + bob);
+        }
+        else if (this.type === 'meeting') {
+            // 끝없는 업무회의: 3D rotating dialog chat bubble mesh
+            const R = 13;
+            const H_depth = 5;
+            const pts3d = [];
+            const rotX = 0.2;
+            const rotY = Date.now() / 250;
+
+            // Generate a 3D hexagon chat bubble shape
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const rx = Math.cos(angle) * R;
+                const ry = Math.sin(angle) * R * 0.7;
+                pts3d.push({ x: rx, y: ry, z: -H_depth }); // top layer
+                pts3d.push({ x: rx, y: ry, z: H_depth });  // bot layer
+            }
+            // Add talk tail tip
+            pts3d.push({ x: -4, y: 8, z: -H_depth });  // 12
+            pts3d.push({ x: -4, y: 8, z: H_depth });   // 13
+            pts3d.push({ x: -12, y: 15, z: 0 });       // 14: tip
+
+            const rotated = pts3d.map(v => {
+                let x1 = v.x * Math.cos(rotY) - v.z * Math.sin(rotY);
+                let z1 = v.x * Math.sin(rotY) + v.z * Math.cos(rotY);
+                let y2 = v.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+                let z2 = v.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+                return { x: x1, y: y2, z: z2 };
+            });
+
+            const proj = rotated.map(r => {
+                const dist = 120;
+                const scale = 1.0 / (1.0 + r.z / dist);
+                return { x: this.x + r.x * scale, y: this.y + bob + r.y * scale };
+            });
+
+            // Draw front face hexagon
+            const frontPts = [0, 2, 4, 6, 8, 10].map(idx => proj[idx]);
+            const frontRot = [0, 2, 4, 6, 8, 10].map(idx => rotated[idx]);
+            const frontNorm = getNormal(frontRot[0], frontRot[1], frontRot[2]);
+            if (frontNorm.z > 0) {
+                drawLowPolyFacet(ctx, frontPts, frontNorm, '#a55eea');
+            }
+
+            // Draw back face hexagon
+            const backPts = [1, 3, 5, 7, 9, 11].map(idx => proj[idx]);
+            const backRot = [1, 3, 5, 7, 9, 11].map(idx => rotated[idx]);
+            const backNorm = getNormal(backRot[0], backRot[1], backRot[2]);
+            if (backNorm.z > 0) {
+                drawLowPolyFacet(ctx, backPts, backNorm, '#8844cc');
+            }
+
+            // Side panels
+            for (let i = 0; i < 6; i++) {
+                const currT = i * 2;
+                const nextT = ((i + 1) % 6) * 2;
+                const norm = getNormal(rotated[currT], rotated[nextT], rotated[nextT + 1]);
+                if (norm.z > 0) {
+                    drawLowPolyFacet(ctx, [proj[currT], proj[nextT], proj[nextT + 1], proj[currT + 1]], norm, '#703bb0');
+                }
+            }
+
+            // Tail panels
+            const tailNorm = getNormal(rotated[12], rotated[14], rotated[13]);
+            if (tailNorm.z > 0) {
+                drawLowPolyFacet(ctx, [proj[12], proj[14], proj[13]], tailNorm, '#703bb0');
+            }
+
+            // Upright emoji icon in the center
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '8px Arial';
+            ctx.fillText('💬', this.x, this.y + bob + 2);
+        }
+        else if (this.type === 'biz_user') {
+            // 현업 요구/독촉: Ticking folding origami alarm letter envelope
+            ctx.save();
+            
+            const foldAngle = Math.sin(Date.now() / 120) * 0.4 - 0.4;
+            const topY = -10 + Math.sin(foldAngle) * 12;
+            const topZ = Math.cos(foldAngle) * 12;
+
+            // Envelope base panel
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 16, y: this.y - 10 + bob },
+                { x: this.x + 16, y: this.y - 10 + bob },
+                { x: this.x + 16, y: this.y + 10 + bob },
+                { x: this.x - 16, y: this.y + 10 + bob }
+            ], { x: 0, y: 0.2, z: 0.98 }, '#fa8231');
+
+            // Left flap
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 16, y: this.y - 10 + bob },
+                { x: this.x - 16, y: this.y + 10 + bob },
+                { x: this.x, y: this.y + bob }
+            ], { x: -0.5, y: 0, z: 0.86 }, '#e17022');
+
+            // Right flap
+            drawLowPolyFacet(ctx, [
+                { x: this.x + 16, y: this.y - 10 + bob },
+                { x: this.x + 16, y: this.y + 10 + bob },
+                { x: this.x, y: this.y + bob }
+            ], { x: 0.5, y: 0, z: 0.86 }, '#e17022');
+
+            // Bottom flap
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 16, y: this.y + 10 + bob },
+                { x: this.x + 16, y: this.y + 10 + bob },
+                { x: this.x, y: this.y + bob }
+            ], { x: 0, y: 0.5, z: 0.86 }, '#fa8231');
+
+            // Animated top flap (open/close)
+            const topProj = project3D(0, topY, topZ, 0, 0, 0, this.x, this.y + bob);
+            drawLowPolyFacet(ctx, [
+                { x: this.x - 16, y: this.y - 10 + bob },
+                { x: this.x + 16, y: this.y - 10 + bob },
+                topProj
+            ], { x: 0, y: -0.5, z: 0.86 }, '#ff9f43');
+
+            // Drawing urgent alarm symbol (!)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 9px "Press Start 2P"';
+            ctx.fillText('!', this.x, this.y + bob + 3);
+
+            ctx.restore();
         }
         else if (this.type === 'ceo_boss') {
             // 운영 배포 사고: Giant 3-Column Server Monolith
@@ -2223,11 +2421,11 @@ const game = {
     currentWave: 0,
     maxWaves: 5,
     wbsStages: [
-        "후드 고양이들의 습격 (Wave 1)",
-        "방패 고양이들의 돌격 (Wave 2)",
-        "ASAP 고양이들의 야간 기습 (Wave 3)",
-        "샤먼 고양이들의 커피 식히기 (Wave 4)",
-        "드래곤 고양이의 마지막 떼쓰기 (Wave 5)"
+        "요구사항 변경 & 단위테스트 오류 공세 (Wave 1)",
+        "레거시 코드 개편 & 갑작스러운 회의 지옥 (Wave 2)",
+        "보안 감사 & 현업 요구 독촉 폭탄 (Wave 3)",
+        "일정 압박 & 대규모 QA 재오픈 공습 (Wave 4)",
+        "서비스 실배포 & 실서버 장애 대응 (Wave 5)"
     ],
     
     buffs: {
@@ -3044,46 +3242,53 @@ const game = {
         this.updateHUD();
 
         if (this.currentWave === 1) {
-            this.showDialog("📢 [Jira Alert] Sprint 1 (핫픽스 롤아웃) 시작! 요구사항 변경(Warning) 티켓들이 대량으로 할당되었습니다. 키보드 타워(Keyboard)를 조속히 배치하여 대응하세요!", "normal");
+            this.showDialog("📢 [Jira Alert] Sprint 1 시작! 요구사항 변경과 단위테스트 실패(FAIL) 티켓들이 무더기로 쏟아집니다. 키보드(Keyboard)를 조속히 배치하여 빌드를 지키세요!", "normal");
         } else if (this.currentWave === 2) {
-            this.showDialog("💬 [Slack Alert] 팀장: Sprint 2 돌입! 고대의 봉인된 레거시 코드(Legacy) 장애가 올라왔답니다. 단단해서 맷집이 어마어마하니 IDE 서버(IDE Server)로 대규모 처리합시다!", "normal");
+            this.showDialog("💬 [Slack Alert] 팀장: Sprint 2 돌입! 무시무시한 레거시 코드와 끝없는 업무회의 공습이 시작됩니다. 회의 중에도 IDE 서버(IDE Server)로 개발을 밀어붙여야 합니다!", "normal");
         } else if (this.currentWave === 3) {
-            this.showDialog("🚨 [Slack Alert] CTO: Sprint 3 보안 감사 대응 시작! (보안 조치로 적들의 체력/방어력이 +30% 증가합니다!) 긴급 장애(Critical Incident)들이 초속으로 뛰어옵니다. 마우스(Mouse)의 레이저 슬로우로 발목을 잡으세요!", "normal");
+            this.showDialog("🚨 [Slack Alert] CTO: Sprint 3 보안 감사 대응 시작! (보안 통제로 적 체력 +30%!) 긴급 장애와 현업 부서의 실시간 요구/독촉 폭탄이 날아옵니다. 마우스(Mouse)로 발목을 잡으세요!", "normal");
         } else if (this.currentWave === 4) {
-            this.showDialog("⏱️ [Jira Alert] Sprint 4 일정 단축 긴급 명령! (일정 압박으로 적들의 이동속도가 +25% 빨라집니다!) QA 재오픈(Bug) 티켓들이 아군 서버를 마비시킵니다. PostgreSQL DB 버프와 AI 어시스턴트로 극복하세요!", "tired");
+            this.showDialog("⏱️ [Jira Alert] Sprint 4 일정 단축 긴급 명령! (이동속도 +25%!) QA 재오픈 공세에 단위테스트 오류와 회의 지옥이 겹쳤습니다. DB 버프와 AI 어시스턴트로 해결하세요!", "tired");
         } else if (this.currentWave === 5) {
-            this.showDialog("🔥 [CRITICAL ALERT] Sprint 5 서비스 실배포! Blocker 레벨의 운영 배포 사고(Production Outage)가 서버실 전체를 강타했습니다! 모든 자원(IDE 서버, AI, 키보드)을 끌어모아 방어해야 퇴근할 수 있습니다!!!", "tired");
+            this.showDialog("🔥 [CRITICAL ALERT] Sprint 5 서비스 실배포! Blocker 등급의 운영 배포 사고가 서버실을 덮쳤습니다! 현업의 독촉과 전방위 장애를 막아내야 오늘 퇴근할 수 있습니다!!!", "tired");
         }
     },
 
     getWaveConfig(waveNum) {
         const list = [];
         if (waveNum === 1) {
-            // Wave 1: 30 spec_adder (dense and fast)
-            for (let i = 0; i < 30; i++) list.push({ type: 'spec_adder', delay: 600 + i * 250 });
+            // Wave 1: 20 spec_adder (요구사항) + 12 unit_test (단위테스트 실패)
+            for (let i = 0; i < 20; i++) list.push({ type: 'spec_adder', delay: 600 + i * 250 });
+            for (let i = 0; i < 12; i++) list.push({ type: 'unit_test', delay: 1200 + i * 350 });
         } 
         else if (waveNum === 2) {
-            // Wave 2: 22 spec_adder + 18 doc_bombers
-            for (let i = 0; i < 22; i++) list.push({ type: 'spec_adder', delay: 500 + i * 250 });
-            for (let i = 0; i < 18; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 400 });
+            // Wave 2: 16 spec_adder + 12 doc_bomber + 8 meeting (업무회의)
+            for (let i = 0; i < 16; i++) list.push({ type: 'spec_adder', delay: 500 + i * 250 });
+            for (let i = 0; i < 12; i++) list.push({ type: 'doc_bomber', delay: 1000 + i * 400 });
+            for (let i = 0; i < 8; i++) list.push({ type: 'meeting', delay: 1500 + i * 500 });
         } 
         else if (waveNum === 3) {
-            // Wave 3: 25 spec_adder + 25 urgent + 16 qa_buggers
-            for (let i = 0; i < 25; i++) list.push({ type: 'spec_adder', delay: 400 + i * 200 });
-            for (let i = 0; i < 25; i++) list.push({ type: 'urgent', delay: 800 + i * 250 });
-            for (let i = 0; i < 16; i++) list.push({ type: 'qa_bugger', delay: 1000 + i * 300 });
+            // Wave 3: 15 spec_adder + 15 urgent + 10 qa_bugger + 10 biz_user (현업 요구/독촉)
+            for (let i = 0; i < 15; i++) list.push({ type: 'spec_adder', delay: 400 + i * 200 });
+            for (let i = 0; i < 15; i++) list.push({ type: 'urgent', delay: 800 + i * 250 });
+            for (let i = 0; i < 10; i++) list.push({ type: 'qa_bugger', delay: 1000 + i * 300 });
+            for (let i = 0; i < 10; i++) list.push({ type: 'biz_user', delay: 1200 + i * 300 });
         } 
         else if (waveNum === 4) {
-            // Wave 4: 22 doc_bombers + 24 qa_buggers + 24 urgent
-            for (let i = 0; i < 22; i++) list.push({ type: 'doc_bomber', delay: 600 + i * 350 });
-            for (let i = 0; i < 24; i++) list.push({ type: 'qa_bugger', delay: 800 + i * 300 });
-            for (let i = 0; i < 24; i++) list.push({ type: 'urgent', delay: 1000 + i * 250 });
+            // Wave 4: 12 doc_bomber + 14 qa_bugger + 12 meeting + 12 unit_test
+            for (let i = 0; i < 12; i++) list.push({ type: 'doc_bomber', delay: 600 + i * 350 });
+            for (let i = 0; i < 14; i++) list.push({ type: 'qa_bugger', delay: 800 + i * 300 });
+            for (let i = 0; i < 12; i++) list.push({ type: 'meeting', delay: 1000 + i * 400 });
+            for (let i = 0; i < 12; i++) list.push({ type: 'unit_test', delay: 1200 + i * 350 });
         } 
         else if (waveNum === 5) {
-            // Wave 5: 30 doc_bombers + 30 qa_buggers + 30 urgent + 3 Outage Bosses!
-            for (let i = 0; i < 30; i++) list.push({ type: 'doc_bomber', delay: 500 + i * 300 });
-            for (let i = 0; i < 30; i++) list.push({ type: 'qa_bugger', delay: 600 + i * 250 });
-            for (let i = 0; i < 30; i++) list.push({ type: 'urgent', delay: 800 + i * 200 });
+            // Wave 5: 16 doc_bomber + 16 qa_bugger + 14 urgent + 10 meeting + 10 unit_test + 10 biz_user + 3 Outage Bosses!
+            for (let i = 0; i < 16; i++) list.push({ type: 'doc_bomber', delay: 500 + i * 300 });
+            for (let i = 0; i < 16; i++) list.push({ type: 'qa_bugger', delay: 600 + i * 250 });
+            for (let i = 0; i < 14; i++) list.push({ type: 'urgent', delay: 800 + i * 200 });
+            for (let i = 0; i < 10; i++) list.push({ type: 'meeting', delay: 1000 + i * 300 });
+            for (let i = 0; i < 10; i++) list.push({ type: 'unit_test', delay: 1200 + i * 300 });
+            for (let i = 0; i < 10; i++) list.push({ type: 'biz_user', delay: 1400 + i * 300 });
             list.push({ type: 'ceo_boss', delay: 5000 });
             list.push({ type: 'ceo_boss', delay: 10000 });
             list.push({ type: 'ceo_boss', delay: 15000 });
