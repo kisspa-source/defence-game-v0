@@ -4126,6 +4126,15 @@ const game = {
             this.caffeineLevel = Math.max(0, this.caffeineLevel - dt * 0.08);
         }
 
+        const caffeineWarning = document.getElementById('caffeine-warning');
+        if (caffeineWarning) {
+            if (this.caffeineLevel > 3.0) {
+                caffeineWarning.classList.remove('hidden');
+            } else {
+                caffeineWarning.classList.add('hidden');
+            }
+        }
+
         if (this.caffeineLevel > 3.0) {
             // Caffeine overdose hand tremors - constant minor screen shake
             this.screenShake = Math.max(this.screenShake, 3);
